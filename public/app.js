@@ -179,6 +179,91 @@ class PalabrasGame {
         }
     }
 
+    animateCorrectWord() {
+        const wordInput = document.getElementById('wordInput');
+        if (wordInput) {
+            wordInput.classList.remove('word-correct');
+            setTimeout(() => {
+                wordInput.classList.add('word-correct');
+                setTimeout(() => {
+                    wordInput.classList.remove('word-correct');
+                }, 800);
+            }, 10);
+        }
+    }
+
+    animateIncorrectWord() {
+        const wordInput = document.getElementById('wordInput');
+        if (wordInput) {
+            // Shake animation
+            wordInput.classList.remove('input-error-shake');
+            wordInput.classList.add('input-error-shake');
+            
+            // Red border animation
+            wordInput.classList.remove('input-error-border');
+            wordInput.classList.add('input-error-border');
+            
+            setTimeout(() => {
+                wordInput.classList.remove('input-error-shake');
+                wordInput.classList.remove('input-error-border');
+            }, 1000);
+        }
+    }
+
+    createFloatingStars() {
+        const wordInput = document.getElementById('wordInput');
+        if (!wordInput) return;
+
+        const rect = wordInput.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        // Crear 8 estrellitas flotantes
+        for (let i = 0; i < 8; i++) {
+            const star = document.createElement('div');
+            star.textContent = '⭐';
+            star.className = 'floating-star';
+            
+            // Posición aleatoria alrededor del input
+            const angle = (i / 8) * 2 * Math.PI;
+            const radius = 50 + Math.random() * 30;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            star.style.left = x + 'px';
+            star.style.top = y + 'px';
+            star.style.animationDelay = (Math.random() * 0.5) + 's';
+            
+            document.body.appendChild(star);
+            
+            // Eliminar después de la animación
+            setTimeout(() => {
+                if (star.parentNode) {
+                    star.parentNode.removeChild(star);
+                }
+            }, 2500);
+        }
+    }
+
+    fadeTransition(callback) {
+        const questionContainer = document.getElementById('inputContainer');
+        if (questionContainer) {
+            questionContainer.classList.add('question-fade-out');
+            
+            setTimeout(() => {
+                if (callback) callback();
+                questionContainer.classList.remove('question-fade-out');
+                questionContainer.classList.add('question-fade-in');
+                
+                setTimeout(() => {
+                    questionContainer.classList.remove('question-fade-in');
+                }, 300);
+            }, 300);
+        } else if (callback) {
+            callback();
+        }
+    }
+
     async startGame(difficulty) {
         try {
             if (difficulty === 'libre') {
@@ -332,7 +417,9 @@ class PalabrasGame {
             this.maxRacha = this.contadorRacha;
         }
         
-        // Animar estrella
+        // Animaciones de celebración
+        this.animateCorrectWord();
+        this.createFloatingStars();
         this.animateStarGain();
         
         // Verificar hitos de racha
@@ -357,6 +444,9 @@ class PalabrasGame {
     handleIncorrectAnswer() {
         // Resetear racha
         this.contadorRacha = 0;
+        
+        // Animaciones de error
+        this.animateIncorrectWord();
         
         this.showFeedback(false, 'Inténtalo otra vez 💜');
         this.playLoseSound();
@@ -528,7 +618,11 @@ class PalabrasGame {
     nextQuestion() {
         this.currentQuestion++;
         this.updateProgress();
-        this.showQuestion();
+        
+        // Usar fade transition entre preguntas
+        this.fadeTransition(() => {
+            this.showQuestion();
+        });
     }
 
     updateProgress() {
