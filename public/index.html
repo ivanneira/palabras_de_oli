@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Aprende con Olivia! 🌟</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">¡Aprende con Olivia! 🌟</h1>
+            <div class="star-counter">
+                <span class="star">⭐</span>
+                <span class="counter" id="starCounter">0</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div id="startScreen" class="start-screen">
+                <div class="buttons-container">
+                    <button class="game-button easy-btn" onclick="startGame('facil')">
+                        <span class="button-icon">🐱</span>
+                        <span class="button-text">FÁCIL</span>
+                    </button>
+                    <button class="game-button hard-btn" onclick="startGame('dificil')">
+                        <span class="button-icon">🦁</span>
+                        <span class="button-text">DIFÍCIL</span>
+                    </button>
+                    <button class="game-button free-btn" onclick="startGame('libre')">
+                        <span class="button-icon">🌈</span>
+                        <span class="button-text">LIBRE</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="gameScreen" class="game-screen hidden">
+                <div class="game-header">
+                    <button class="back-btn" onclick="goBack()">← Volver</button>
+                    <div class="progress">
+                        <span id="currentQuestion">1</span> / <span id="totalQuestions">10</span>
+                    </div>
+                </div>
+                
+                <div class="question-container">
+                    <div id="questionText" class="question-text"></div>
+                    <div id="questionImage" class="question-image"></div>
+                </div>
+
+                <div id="optionsContainer" class="options-container">
+                </div>
+
+                <div class="game-controls">
+                    <button id="nextBtn" class="next-btn hidden" onclick="nextQuestion()">Siguiente</button>
+                </div>
+            </div>
+
+            <div id="resultsScreen" class="results-screen hidden">
+                <div class="results-content">
+                    <h2>¡Muy bien, Olivia! 🎉</h2>
+                    <div class="score">
+                        <span class="score-text">Puntuación:</span>
+                        <span id="finalScore" class="score-number">0</span>
+                        <span class="score-total">/ 10</span>
+                    </div>
+                    <div class="stars-earned">
+                        <span id="starsEarned">0</span> ⭐ ganadas
+                    </div>
+                    <button class="play-again-btn" onclick="goBack()">Jugar de nuevo</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+{
+  "words": [
+    {
+      "palabra": "gato",
+      "categoria": "animales",
+      "dificultad": "facil",
+      "imagen": "/images/gato.jpg",
+      "sonido": "/sounds/gato.mp3"
+    },
+    {
+      "palabra": "perro",
+      "categoria": "animales", 
+      "dificultad": "facil",
+      "imagen": "/images/perro.jpg",
+      "sonido": "/sounds/perro.mp3"
+    },
+    {
+      "palabra": "león",
+      "categoria": "animales",
+      "dificultad": "dificil",
+      "imagen": "/images/leon.jpg",
+      "sonido": "/sounds/leon.mp3"
+    },
+    {
+      "palabra": "oso",
+      "categoria": "animales",
+      "dificultad": "dificil",
+      "imagen": "/images/oso.jpg",
+      "sonido": "/sounds/oso.mp3"
+    },
+    {
+      "palabra": "pato",
+      "categoria": "animales",
+      "dificultad": "facil",
+      "imagen": "/images/pato.jpg",
+      "sonido": "/sounds/pato.mp3"
+    },
+    {
+      "palabra": "vaca",
+      "categoria": "animales",
+      "dificultad": "facil",
+      "imagen": "/images/vaca.jpg",
+      "sonido": "/sounds/vaca.mp3"
+    },
+    {
+      "palabra": "pez",
+      "categoria": "animales",
+      "dificultad": "facil",
+      "imagen": "/images/pez.jpg",
+      "sonido": "/sounds/pez.mp3"
+    },
+    {
+      "palabra": "rojo",
+      "categoria": "colores",
+      "dificultad": "facil",
+      "imagen": "/images/rojo.jpg",
+      "sonido": "/sounds/rojo.mp3"
+    },
+    {
+      "palabra": "azul",
+      "categoria": "colores",
+      "dificultad": "facil",
+      "imagen": "/images/azul.jpg",
+      "sonido": "/sounds/azul.mp3"
+    },
+    {
+      "palabra": "verde",
+      "categoria": "colores",
+      "dificultad": "facil",
+      "imagen": "/images/verde.jpg",
+      "sonido": "/sounds/verde.mp3"
+    },
+    {
+      "palabra": "rosa",
+      "categoria": "colores",
+      "dificultad": "facil",
+      "imagen": "/images/rosa.jpg",
+      "sonido": "/sounds/rosa.mp3"
+    },
+    {
+      "palabra": "negro",
+      "categoria": "colores",
+      "dificultad": "dificil",
+      "imagen": "/images/negro.jpg",
+      "sonido": "/sounds/negro.mp3"
+    },
+    {
+      "palabra": "casa",
+      "categoria": "objetos",
+      "dificultad": "facil",
+      "imagen": "/images/casa.jpg",
+      "sonido": "/sounds/casa.mp3"
+    },
+    {
+      "palabra": "sol",
+      "categoria": "objetos",
+      "dificultad": "facil",
+      "imagen": "/images/sol.jpg",
+      "sonido": "/sounds/sol.mp3"
+    },
+    {
+      "palabra": "luna",
+      "categoria": "objetos",
+      "dificultad": "dificil",
+      "imagen": "/images/luna.jpg",
+      "sonido": "/sounds/luna.mp3"
+    },
+    {
+      "palabra": "árbol",
+      "categoria": "objetos",
+      "dificultad": "dificil",
+      "imagen": "/images/arbol.jpg",
+      "sonido": "/sounds/arbol.mp3"
+    },
+    {
+      "palabra": "flor",
+      "categoria": "objetos",
+      "dificultad": "facil",
+      "imagen": "/images/flor.jpg",
+      "sonido": "/sounds/flor.mp3"
+    },
+    {
+      "palabra": "agua",
+      "categoria": "objetos",
+      "dificultad": "facil",
+      "imagen": "/images/agua.jpg",
+      "sonido": "/sounds/agua.mp3"
+    },
+    {
+      "palabra": "mesa",
+      "categoria": "objetos",
+      "dificultad": "facil",
+      "imagen": "/images/mesa.jpg",
+      "sonido": "/sounds/mesa.mp3"
+    },
+    {
+      "palabra": "libro",
+      "categoria": "objetos",
+      "dificultad": "dificil",
+      "imagen": "/images/libro.jpg",
+      "sonido": "/sounds/libro.mp3"
+    }
+  ]
+}
