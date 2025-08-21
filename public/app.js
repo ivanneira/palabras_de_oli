@@ -247,25 +247,26 @@ class PalabrasGame {
     }
 
     async loadPointsFromAPI() {
+        // En Vercel, usar directamente localStorage sin API
         try {
-            const response = await fetch('/api/points');
-            const data = await response.json();
-            this.totalStars = data.totalStars || 0;
-            this.contadorRacha = data.currentStreak || 0;
-            this.maxRacha = data.maxStreak || 0;
-            
-            // Backup en localStorage
-            localStorage.setItem('olivia-points', JSON.stringify(data));
-        } catch (error) {
-            console.error('Error loading points from API:', error);
-            // Fallback a localStorage
             const savedData = localStorage.getItem('olivia-points');
             if (savedData) {
                 const data = JSON.parse(savedData);
                 this.totalStars = data.totalStars || 0;
                 this.contadorRacha = data.currentStreak || 0;
                 this.maxRacha = data.maxStreak || 0;
+            } else {
+                // Valores por defecto para nueva sesión
+                this.totalStars = 0;
+                this.contadorRacha = 0;
+                this.maxRacha = 0;
             }
+        } catch (error) {
+            console.error('Error loading points from localStorage:', error);
+            // Valores por defecto en caso de error
+            this.totalStars = 0;
+            this.contadorRacha = 0;
+            this.maxRacha = 0;
         }
     }
 
@@ -277,20 +278,10 @@ class PalabrasGame {
         };
 
         try {
-            await fetch('/api/points', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(pointsData)
-            });
-            
-            // Backup en localStorage
+            // En Vercel, guardar directamente en localStorage
             localStorage.setItem('olivia-points', JSON.stringify(pointsData));
         } catch (error) {
-            console.error('Error saving points to API:', error);
-            // Guardar solo en localStorage si falla la API
-            localStorage.setItem('olivia-points', JSON.stringify(pointsData));
+            console.error('Error saving points to localStorage:', error);
         }
     }
 
