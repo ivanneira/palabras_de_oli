@@ -9,13 +9,21 @@ class PalabrasGame {
         this.maxRacha = 0;
         this.gameMode = '';
         this.currentWord = null;
+        this.usedWords = {
+            facil: new Set(),
+            dificil: new Set()
+        };
         this.speechSynthesis = window.speechSynthesis;
         this.spanishVoice = null;
         this.listenCount = 3;
         this.preloadedImages = new Map();
         this.audioFiles = {
             win: null,
-            lose: null
+            lose: null,
+            shine: null,
+            break: null,
+            winStreak: null,
+            applause: null
         };
         
         // 10 mensajes personalizados random para Olivia
@@ -109,10 +117,18 @@ class PalabrasGame {
 
         Promise.all([
             loadAudio('win.wav'),
-            loadAudio('lose.wav')
-        ]).then(([winAudio, loseAudio]) => {
+            loadAudio('lose.wav'),
+            loadAudio('shine.mp3'),
+            loadAudio('break.mp3'),
+            loadAudio('win.mp3'),
+            loadAudio('applause.mp3')
+        ]).then(([winAudio, loseAudio, shineAudio, breakAudio, winStreakAudio, applauseAudio]) => {
             this.audioFiles.win = winAudio;
             this.audioFiles.lose = loseAudio;
+            this.audioFiles.shine = shineAudio;
+            this.audioFiles.break = breakAudio;
+            this.audioFiles.winStreak = winStreakAudio;
+            this.audioFiles.applause = applauseAudio;
         });
     }
 
@@ -326,7 +342,16 @@ class PalabrasGame {
             const response = await fetch(`/api/words/${difficulty}`);
             const data = await response.json();
             
-            this.currentWords = this.shuffleArray([...data.words]);
+            // Filtrar palabras que no han sido usadas
+            const availableWords = data.words.filter(word => !this.usedWords[difficulty].has(word.palabra));
+            
+            // Si no quedan palabras, mostrar pantalla de completado
+            if (availableWords.length === 0) {
+                this.showCompletionScreen(difficulty);
+                return;
+            }
+            
+            this.currentWords = this.shuffleArray([...availableWords]);
             this.currentQuestion = 0;
             this.score = 0;
             
@@ -424,11 +449,15 @@ class PalabrasGame {
         wordInput.maxLength = palabra.length;
         wordInput.value = '';
         
-        if (this.gameMode === 'facil' && hintText) {
+        if (hintText) {
             hintText.textContent = palabra.toUpperCase();
             hintText.style.display = 'block';
-        } else if (hintText) {
-            hintText.style.display = 'none';
+            
+            if (this.gameMode === 'facil') {
+                hintText.style.opacity = '0.4';
+            } else if (this.gameMode === 'dificil') {
+                hintText.style.opacity = '0.15';
+            }
         }
 
         wordInput.focus();
@@ -483,7 +512,7 @@ class PalabrasGame {
         // Mostrar feedback con mensaje random
         const randomMessage = this.getRandomMessage();
         this.showFeedback(true, randomMessage);
-        this.playWinSound();
+        this.playShineSound();
         
         // Actualizar displays y guardar
         this.updateDisplays();
@@ -505,7 +534,7 @@ class PalabrasGame {
         this.animateIncorrectWord();
         
         this.showFeedback(false, 'Inténtalo otra vez 💜');
-        this.playLoseSound();
+        this.playBreakSound();
         
         // Actualizar displays y guardar
         this.updateDisplays();
@@ -526,19 +555,35 @@ class PalabrasGame {
         if (this.contadorRacha === 5) {
             setTimeout(() => {
                 this.showStreakMessage('¡Súper Olivia! 5 seguidos! 🌈');
+                this.playWinStreakSound();
                 this.speakWord('¡Súper Olivia! 5 seguidos!');
             }, 1500);
         } else if (this.contadorRacha === 10) {
             setTimeout(() => {
                 this.showStreakMessage('¡INCREÍBLE OLIVIA! ¡10 PERFECTOS! 🎊🦄✨');
+                this.playWinStreakSound();
                 this.speakWord('¡Increíble Olivia! 10 perfectos!');
                 this.showConfetti();
-                // Reiniciar racha tras 10
+            }, 1500);
+        } else if (this.contadorRacha === 15) {
+            setTimeout(() => {
+                this.showStreakMessage('¡ESPECTACULAR OLIVIA! ¡15 SEGUIDOS! 🌟⚡🎆');
+                this.playWinStreakSound();
+                this.speakWord('¡Espectacular Olivia! 15 seguidos!');
+                this.showConfetti();
+            }, 1500);
+        } else if (this.contadorRacha === 20) {
+            setTimeout(() => {
+                this.showStreakMessage('🦄 ¡NIVEL UNICORNIO! ¡20 PERFECTOS! 🦄✨🌈');
+                this.playApplauseSound();
+                this.speakWord('¡Nivel unicornio! 20 perfectos!');
+                this.showConfetti();
+                // Reiniciar racha tras nivel unicornio
                 setTimeout(() => {
                     this.contadorRacha = 0;
                     this.updateDisplays();
                     this.savePointsToAPI();
-                }, 3000);
+                }, 4000);
             }, 1500);
         }
     }
@@ -622,6 +667,42 @@ class PalabrasGame {
         }
     }
 
+    playShineSound() {
+        if (this.audioFiles.shine) {
+            this.audioFiles.shine.currentTime = 0;
+            this.audioFiles.shine.play().catch(() => {
+                console.log('Error playing shine sound');
+            });
+        }
+    }
+
+    playBreakSound() {
+        if (this.audioFiles.break) {
+            this.audioFiles.break.currentTime = 0;
+            this.audioFiles.break.play().catch(() => {
+                console.log('Error playing break sound');
+            });
+        }
+    }
+
+    playWinStreakSound() {
+        if (this.audioFiles.winStreak) {
+            this.audioFiles.winStreak.currentTime = 0;
+            this.audioFiles.winStreak.play().catch(() => {
+                console.log('Error playing win streak sound');
+            });
+        }
+    }
+
+    playApplauseSound() {
+        if (this.audioFiles.applause) {
+            this.audioFiles.applause.currentTime = 0;
+            this.audioFiles.applause.play().catch(() => {
+                console.log('Error playing applause sound');
+            });
+        }
+    }
+
     showFeedback(isCorrect, message) {
         const feedbackMessage = document.getElementById('feedbackMessage');
         if (!feedbackMessage) return;
@@ -699,6 +780,13 @@ class PalabrasGame {
     }
 
     showResults() {
+        // Agregar palabras completadas a la lista de usadas
+        if (this.gameMode === 'facil' || this.gameMode === 'dificil') {
+            this.currentWords.forEach(word => {
+                this.usedWords[this.gameMode].add(word.palabra);
+            });
+        }
+        
         const starsEarned = this.score;
         const totalQuestions = this.currentWords.length;
         
@@ -748,6 +836,46 @@ class PalabrasGame {
         
         // Mostrar confetti
         this.showConfetti();
+    }
+
+    showCompletionScreen(difficulty) {
+        // Crear pantalla de completado
+        const completionScreen = document.createElement('div');
+        completionScreen.className = 'completion-screen';
+        const difficultyText = difficulty === 'facil' ? 'FÁCIL' : 'DIFÍCIL';
+        completionScreen.innerHTML = `
+            <div class="completion-content">
+                <div class="completion-emoji">🎉</div>
+                <h1 class="completion-title">¡FELICIDADES OLIVIA!</h1>
+                <p class="completion-message">🌟 ¡Has completado TODAS las palabras del modo ${difficultyText}! 🌟</p>
+                <div class="completion-buttons">
+                    <button class="completion-restart-btn" onclick="game.resetMode('${difficulty}'); this.parentElement.parentElement.parentElement.remove();">
+                        🔄 Volver a empezar
+                    </button>
+                    <button class="completion-menu-btn" onclick="this.parentElement.parentElement.parentElement.remove(); game.showScreen('startScreen');">
+                        🏠 Menú principal
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(completionScreen);
+        
+        // Reproducir sonido de applause y mensaje
+        this.playApplauseSound();
+        setTimeout(() => {
+            this.speakWord(`¡Felicidades Olivia! Has completado todas las palabras del modo ${difficultyText}!`);
+        }, 1000);
+        
+        // Mostrar confetti
+        this.showConfetti();
+    }
+
+    resetMode(difficulty) {
+        // Resetear palabras usadas del modo
+        this.usedWords[difficulty].clear();
+        // Reiniciar el juego en ese modo
+        this.startGame(difficulty);
     }
 
     // Función para resetear puntos
