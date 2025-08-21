@@ -137,3 +137,4 @@ dist
 .pnp.*
 .claude/settings.local.json
 data/points.txt
+CLAUDE.md

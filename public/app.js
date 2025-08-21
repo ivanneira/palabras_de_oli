@@ -237,7 +237,7 @@ class PalabrasGame {
 
     async loadWords() {
         try {
-            const response = await fetch('/api/words');
+            const response = await fetch('./words.json');
             const data = await response.json();
             this.words = data.words;
         } catch (error) {
