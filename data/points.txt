@@ -1,0 +1,5 @@
+{
+  "totalStars": 12,
+  "currentStreak": 1,
+  "maxStreak": 10
+}
