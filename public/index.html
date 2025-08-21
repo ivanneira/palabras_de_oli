@@ -60,24 +60,31 @@
 
                 <div class="game-controls">
                     <button id="nextBtn" class="next-btn hidden" onclick="nextQuestion()">Siguiente</button>
-                    <button id="speakBtn" class="speak-btn" onclick="speakCurrentWord()">🔊 Repetir</button>
+                    <button id="listenBtn" class="listen-btn" onclick="listenToWord()">
+                        🔊 Escuchar (<span id="listenCount">3</span>)
+                    </button>
                 </div>
             </div>
 
             <div id="freePlayScreen" class="free-play-screen hidden">
                 <div class="free-play-content">
-                    <div class="game-header">
-                        <button class="back-btn" onclick="goBack()">← Volver</button>
-                        <h2>Modo Libre - Practica cualquier palabra 🌈</h2>
+                    <div class="free-header">
+                        <h2>Modo Libre 🌈</h2>
+                        <p>Practica cualquier palabra que quieras</p>
                     </div>
                     
-                    <div class="free-input-container">
-                        <input type="text" id="freeInput" class="free-input" placeholder="Escribe cualquier palabra..." autocomplete="off" spellcheck="false">
-                        <button class="speak-free-btn" onclick="speakFreeInput()">🔊 Pronunciar</button>
+                    <div class="free-main">
+                        <div class="free-input-wrapper">
+                            <input type="text" id="freeInput" class="free-input-large" placeholder="Escribe cualquier palabra..." autocomplete="off" spellcheck="false">
+                        </div>
+                        
+                        <div class="free-instructions">
+                            <p>Presiona <strong>Enter</strong> para escuchar la pronunciación</p>
+                        </div>
                     </div>
                     
-                    <div class="free-instructions">
-                        <p>Escribe cualquier palabra y presiona Enter o el botón 🔊 para escucharla</p>
+                    <div class="free-footer">
+                        <button class="back-btn-large" onclick="goBack()">← Volver al Menú</button>
                     </div>
                 </div>
             </div>

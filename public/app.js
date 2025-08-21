@@ -9,6 +9,11 @@ class PalabrasGame {
         this.currentWord = null;
         this.speechSynthesis = window.speechSynthesis;
         this.spanishVoice = null;
+        this.listenCount = 3;
+        this.audioFiles = {
+            win: null,
+            lose: null
+        };
         
         this.initializeGame();
     }
@@ -20,6 +25,7 @@ class PalabrasGame {
             this.updateStarCounter();
             this.setupVoices();
             this.setupEventListeners();
+            this.loadAudioFiles();
         } catch (error) {
             console.error('Error initializing game:', error);
             alert('Error al cargar el juego. Por favor, recarga la página.');
@@ -43,6 +49,24 @@ class PalabrasGame {
         }
     }
 
+    loadAudioFiles() {
+        const loadAudio = (filename) => {
+            return new Promise((resolve) => {
+                const audio = new Audio(`/sounds/${filename}`);
+                audio.addEventListener('canplaythrough', () => resolve(audio));
+                audio.addEventListener('error', () => resolve(null));
+            });
+        };
+
+        Promise.all([
+            loadAudio('win.wav'),
+            loadAudio('lose.wav')
+        ]).then(([winAudio, loseAudio]) => {
+            this.audioFiles.win = winAudio;
+            this.audioFiles.lose = loseAudio;
+        });
+    }
+
     setupEventListeners() {
         const wordInput = document.getElementById('wordInput');
         const freeInput = document.getElementById('freeInput');
@@ -55,6 +79,7 @@ class PalabrasGame {
         if (freeInput) {
             freeInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     this.speakFreeInput();
                 }
             });
@@ -132,9 +157,11 @@ class PalabrasGame {
         }
 
         this.currentWord = this.currentWords[this.currentQuestion];
+        this.listenCount = 3;
         this.clearPreviousQuestion();
         this.displayQuestion();
         this.setupWordInput();
+        this.updateListenButton();
         
         setTimeout(() => {
             this.speakWord(this.currentWord.palabra);
@@ -232,7 +259,7 @@ class PalabrasGame {
     handleCorrectAnswer() {
         this.score++;
         this.showFeedback(true, '¡Muy bien, Olivia! 🎉');
-        this.speakWord('¡Muy bien!');
+        this.playWinSound();
         
         const nextBtn = document.getElementById('nextBtn');
         if (nextBtn) {
@@ -244,7 +271,7 @@ class PalabrasGame {
 
     handleIncorrectAnswer() {
         this.showFeedback(false, 'Inténtalo otra vez 💜');
-        this.speakWord('Inténtalo otra vez');
+        this.playLoseSound();
         
         setTimeout(() => {
             const wordInput = document.getElementById('wordInput');
@@ -255,6 +282,46 @@ class PalabrasGame {
             }
             this.clearFeedback();
         }, 2000);
+    }
+
+    updateListenButton() {
+        const listenBtn = document.getElementById('listenBtn');
+        const listenCountSpan = document.getElementById('listenCount');
+        
+        if (listenBtn && listenCountSpan) {
+            listenCountSpan.textContent = this.listenCount;
+            listenBtn.disabled = this.listenCount <= 0;
+        }
+    }
+
+    listenToWord() {
+        if (this.listenCount > 0 && this.currentWord) {
+            this.listenCount--;
+            this.updateListenButton();
+            this.speakWord(this.currentWord.palabra);
+        }
+    }
+
+    playWinSound() {
+        if (this.audioFiles.win) {
+            this.audioFiles.win.currentTime = 0;
+            this.audioFiles.win.play().catch(() => {
+                this.speakWord('¡Muy bien!');
+            });
+        } else {
+            this.speakWord('¡Muy bien!');
+        }
+    }
+
+    playLoseSound() {
+        if (this.audioFiles.lose) {
+            this.audioFiles.lose.currentTime = 0;
+            this.audioFiles.lose.play().catch(() => {
+                this.speakWord('Inténtalo otra vez');
+            });
+        } else {
+            this.speakWord('Inténtalo otra vez');
+        }
     }
 
     showFeedback(isCorrect, message) {
@@ -299,7 +366,10 @@ class PalabrasGame {
     speakFreeInput() {
         const freeInput = document.getElementById('freeInput');
         if (freeInput && freeInput.value.trim()) {
-            this.speakWord(freeInput.value.trim());
+            const text = freeInput.value.trim();
+            this.speakWord(text);
+            freeInput.value = '';
+            freeInput.focus();
         }
     }
 
@@ -395,5 +465,11 @@ function speakCurrentWord() {
 function speakFreeInput() {
     if (game) {
         game.speakFreeInput();
+    }
+}
+
+function listenToWord() {
+    if (game) {
+        game.listenToWord();
     }
 }
