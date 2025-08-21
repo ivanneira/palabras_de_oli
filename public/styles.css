@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Comic Sans MS', cursive, sans-serif;
-    background: linear-gradient(135deg, #FFB6C1, #DDA0DD, #87CEEB);
+    background: linear-gradient(135deg, #E6E6FA, #DDA0DD, #9370DB, #8A2BE2);
     min-height: 100vh;
     color: #4A4A4A;
 }
@@ -308,7 +308,7 @@ body {
     font-size: 2rem;
     font-family: 'Comic Sans MS', cursive, sans-serif;
     font-weight: bold;
-    text-align: center;
+    text-align: left;
     border: 3px solid #DDA0DD;
     border-radius: 15px;
     background: rgba(255, 255, 255, 0.95);
@@ -331,9 +331,9 @@ body {
     font-size: 2rem;
     font-family: 'Comic Sans MS', cursive, sans-serif;
     font-weight: bold;
-    text-align: center;
+    text-align: left;
     color: #DDA0DD;
-    opacity: 0.3;
+    opacity: 0.4;
     pointer-events: none;
     letter-spacing: 8px;
     text-transform: uppercase;
@@ -729,14 +729,124 @@ body {
     }
 }
 
+/* Reset button styles */
+.reset-btn {
+    background: rgba(255, 255, 255, 0.3);
+    color: #666;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+}
+
+.reset-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #333;
+}
+
+/* Tablet styles */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .title {
+        font-size: 2.2rem;
+    }
+    
+    .container {
+        max-width: 90%;
+        padding: 15px;
+    }
+    
+    .free-play-content {
+        padding: 40px;
+    }
+    
+    .question-image img {
+        max-width: 350px;
+        max-height: 350px;
+    }
+}
+
+/* Mobile styles */
 @media (max-width: 768px) {
     .title {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     .header {
         flex-direction: column;
-        gap: 20px;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .stats-container {
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .star-counter, .streak-counter {
+        padding: 12px 15px;
+    }
+    
+    .buttons-container {
+        gap: 15px;
+    }
+    
+    .game-button {
+        padding: 18px 25px;
+        font-size: 1.2rem;
+    }
+    
+    .button-icon {
+        font-size: 1.5rem;
+    }
+    
+    .question-text {
+        font-size: 1.5rem;
+    }
+    
+    .question-image img {
+        max-width: 280px;
+        max-height: 280px;
+    }
+    
+    .word-input {
+        font-size: 1.5rem;
+        padding: 15px;
+        letter-spacing: 4px;
+        text-align: left;
+    }
+    
+    .hint-text {
+        font-size: 1.5rem;
+        letter-spacing: 4px;
+        text-align: left;
+    }
+    
+    .free-play-content {
+        padding: 30px 20px;
+    }
+    
+    .free-header h2 {
+        font-size: 2.2rem;
+    }
+    
+    .free-input-large {
+        font-size: 1.8rem;
+        padding: 20px;
+    }
+}
+
+/* Extra small mobile */
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .title {
+        font-size: 1.5rem;
     }
     
     .stats-container {
@@ -744,12 +854,106 @@ body {
         gap: 10px;
     }
     
-    .buttons-container {
-        gap: 20px;
+    .game-button {
+        padding: 15px 20px;
+        font-size: 1.1rem;
     }
     
-    .game-button {
-        padding: 20px 30px;
+    .word-input {
         font-size: 1.3rem;
+        letter-spacing: 2px;
+        text-align: left;
+    }
+    
+    .hint-text {
+        font-size: 1.3rem;
+        letter-spacing: 2px;
+        text-align: left;
+    }
+}
+
+/* Easter Egg Unicorn Screen */
+.unicorn-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(45deg, #E6E6FA, #DDA0DD, #9370DB, #8A2BE2, #E6E6FA);
+    background-size: 400% 400%;
+    animation: rainbow-background 3s ease infinite;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.unicorn-content {
+    text-align: center;
+    color: white;
+    animation: float 3s ease-in-out infinite;
+}
+
+.unicorn-emoji {
+    font-size: 8rem;
+    animation: spin-unicorn 4s linear infinite;
+    margin-bottom: 20px;
+}
+
+.unicorn-title {
+    font-size: 3rem;
+    font-weight: bold;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+    margin-bottom: 20px;
+    animation: glow-text 2s ease-in-out infinite alternate;
+}
+
+.unicorn-message {
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.unicorn-close-btn {
+    background: linear-gradient(45deg, #FF69B4, #DDA0DD);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.unicorn-close-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes rainbow-background {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes spin-unicorn {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes glow-text {
+    from { 
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5), 0 0 20px #E6E6FA;
+    }
+    to { 
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5), 0 0 40px #DDA0DD, 0 0 60px #9370DB;
     }
 }

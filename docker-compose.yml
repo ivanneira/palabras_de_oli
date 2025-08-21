@@ -3,11 +3,12 @@ version: '3.8'
 services:
   palabras-app:
     build: .
+    container_name: palabras-olivia
     ports:
-      - "3000:3000"
+      - "3011:3000"
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./data:/app/data
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
+      - PORT=3000
     restart: unless-stopped

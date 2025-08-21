@@ -12,12 +12,59 @@ class PalabrasGame {
         this.speechSynthesis = window.speechSynthesis;
         this.spanishVoice = null;
         this.listenCount = 3;
+        this.preloadedImages = new Map();
         this.audioFiles = {
             win: null,
             lose: null
         };
         
+        // 10 mensajes personalizados random para Olivia
+        this.randomMessages = [
+            '¡Olivia es genial! 🌟',
+            '¡Qué lista eres! 🎯',
+            '¡Sigue así campeona! 💪',
+            '¡Eres increíble, Olivia! ✨',
+            '¡Muy bien, pequeña genio! 🧠',
+            '¡Fantástico trabajo! 🎉',
+            '¡Olivia, eres la mejor! 👑',
+            '¡Súper bien hecho! 🚀',
+            '¡Qué inteligente eres! 💡',
+            '¡Excelente, Olivia! 🌈'
+        ];
+        
         this.initializeGame();
+    }
+
+    // Función para normalizar acentos (león = leon)
+    normalizeText(text) {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
+
+    // Función para obtener mensaje random
+    getRandomMessage() {
+        const randomIndex = Math.floor(Math.random() * this.randomMessages.length);
+        return this.randomMessages[randomIndex];
+    }
+
+    // Función para precargar imagen
+    preloadImage(imageSrc) {
+        if (this.preloadedImages.has(imageSrc)) {
+            return Promise.resolve();
+        }
+        
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                this.preloadedImages.set(imageSrc, img);
+                resolve();
+            };
+            img.onerror = () => resolve(); // Continuar aunque falle la precarga
+            img.src = imageSrc;
+        });
     }
 
     async initializeGame() {
@@ -314,6 +361,14 @@ class PalabrasGame {
         this.setupWordInput();
         this.updateListenButton();
         
+        // Precargar la siguiente imagen si existe
+        if (this.currentQuestion + 1 < this.currentWords.length) {
+            const nextWord = this.currentWords[this.currentQuestion + 1];
+            if (nextWord && nextWord.imagen && !nextWord.imagen.startsWith('color:')) {
+                this.preloadImage(nextWord.imagen);
+            }
+        }
+        
         setTimeout(() => {
             this.speakWord(this.currentWord.palabra);
         }, 500);
@@ -395,8 +450,8 @@ class PalabrasGame {
         const wordInput = document.getElementById('wordInput');
         if (!wordInput || !this.currentWord) return;
 
-        const userAnswer = wordInput.value.toLowerCase().trim();
-        const correctAnswer = this.currentWord.palabra.toLowerCase();
+        const userAnswer = this.normalizeText(wordInput.value);
+        const correctAnswer = this.normalizeText(this.currentWord.palabra);
 
         wordInput.disabled = true;
 
@@ -425,8 +480,9 @@ class PalabrasGame {
         // Verificar hitos de racha
         this.checkStreakMilestones();
         
-        // Mostrar feedback normal
-        this.showFeedback(true, '¡Muy bien, Olivia! 🎉');
+        // Mostrar feedback con mensaje random
+        const randomMessage = this.getRandomMessage();
+        this.showFeedback(true, randomMessage);
         this.playWinSound();
         
         // Actualizar displays y guardar
@@ -587,10 +643,17 @@ class PalabrasGame {
 
         this.speechSynthesis.cancel();
         
-        const utterance = new SpeechSynthesisUtterance(text);
+        // Añadir exclamaciones para hacer más expresivo
+        let expressiveText = text;
+        if (!text.includes('¡') && !text.includes('!')) {
+            expressiveText = `¡${text}!`;
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(expressiveText);
         utterance.lang = 'es-ES';
-        utterance.rate = 0.8;
-        utterance.pitch = 1.2;
+        utterance.rate = 0.6; // Más lenta
+        utterance.pitch = 1.4; // Más aguda
+        utterance.volume = 1.0;
         
         if (this.spanishVoice) {
             utterance.voice = this.spanishVoice;
@@ -636,22 +699,71 @@ class PalabrasGame {
     }
 
     showResults() {
-        const starsEarned = this.score; // Ya se agregaron durante el juego
+        const starsEarned = this.score;
+        const totalQuestions = this.currentWords.length;
         
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('starsEarned').textContent = starsEarned;
         
+        // Easter egg: 20/20 perfectas = pantalla especial de unicornio violeta
+        if (this.score === totalQuestions && totalQuestions === 20) {
+            this.showUnicornEasterEgg();
+            return;
+        }
+        
         this.showScreen('resultsScreen');
         
         setTimeout(() => {
-            if (this.score >= this.currentWords.length * 0.8) {
+            if (this.score >= totalQuestions * 0.8) {
                 this.speakWord('¡Excelente trabajo, Olivia!');
-            } else if (this.score >= this.currentWords.length * 0.6) {
+            } else if (this.score >= totalQuestions * 0.6) {
                 this.speakWord('¡Muy bien, Olivia!');
             } else {
                 this.speakWord('¡Sigue practicando, Olivia!');
             }
         }, 500);
+    }
+
+    showUnicornEasterEgg() {
+        // Crear pantalla de unicornio
+        const unicornScreen = document.createElement('div');
+        unicornScreen.className = 'unicorn-screen';
+        unicornScreen.innerHTML = `
+            <div class="unicorn-content">
+                <div class="unicorn-emoji">🦄</div>
+                <h1 class="unicorn-title">¡OLIVIA ES PERFECTA!</h1>
+                <p class="unicorn-message">🌟 ¡20 de 20! ¡Eres una súper estrella! 🌟</p>
+                <button class="unicorn-close-btn" onclick="this.parentElement.parentElement.remove(); game.showScreen('resultsScreen');">
+                    ¡Continuar siendo genial! ✨
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(unicornScreen);
+        
+        // Reproducir mensaje especial
+        setTimeout(() => {
+            this.speakWord('¡Olivia es perfecta! ¡Veinte de veinte! ¡Eres una súper estrella!');
+        }, 1000);
+        
+        // Mostrar confetti
+        this.showConfetti();
+    }
+
+    // Función para resetear puntos
+    resetPoints() {
+        if (confirm('¿Estás segura de que quieres reiniciar todos los puntos de Olivia?')) {
+            this.totalStars = 0;
+            this.contadorRacha = 0;
+            this.maxRacha = 0;
+            this.updateDisplays();
+            this.savePointsToAPI();
+            
+            // Mensaje de confirmación
+            setTimeout(() => {
+                this.speakWord('Puntos reiniciados');
+            }, 500);
+        }
     }
 
     showScreen(screenId) {
@@ -714,5 +826,11 @@ function speakFreeInput() {
 function listenToWord() {
     if (game) {
         game.listenToWord();
+    }
+}
+
+function resetPoints() {
+    if (game) {
+        game.resetPoints();
     }
 }
