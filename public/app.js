@@ -732,8 +732,8 @@ class PalabrasGame {
         
         const utterance = new SpeechSynthesisUtterance(expressiveText);
         utterance.lang = 'es-ES';
-        utterance.rate = 0.6; // Más lenta
-        utterance.pitch = 1.4; // Más aguda
+        utterance.rate = 0.4; // Más lenta
+        utterance.pitch = 2; // Más aguda
         utterance.volume = 1.0;
         
         if (this.spanishVoice) {
