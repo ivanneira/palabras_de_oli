@@ -6,7 +6,9 @@ class PalabrasGame {
         this.score = 0;
         this.totalStars = 0;
         this.gameMode = '';
-        this.questionsPerGame = 10;
+        this.currentWord = null;
+        this.speechSynthesis = window.speechSynthesis;
+        this.spanishVoice = null;
         
         this.initializeGame();
     }
@@ -16,9 +18,46 @@ class PalabrasGame {
             await this.loadWords();
             this.loadStarsFromStorage();
             this.updateStarCounter();
+            this.setupVoices();
+            this.setupEventListeners();
         } catch (error) {
             console.error('Error initializing game:', error);
             alert('Error al cargar el juego. Por favor, recarga la página.');
+        }
+    }
+
+    setupVoices() {
+        const setVoice = () => {
+            const voices = this.speechSynthesis.getVoices();
+            this.spanishVoice = voices.find(voice => 
+                voice.lang.includes('es') || 
+                voice.name.toLowerCase().includes('spanish') ||
+                voice.name.toLowerCase().includes('español')
+            ) || voices[0];
+        };
+
+        if (this.speechSynthesis.getVoices().length === 0) {
+            this.speechSynthesis.addEventListener('voiceschanged', setVoice);
+        } else {
+            setVoice();
+        }
+    }
+
+    setupEventListeners() {
+        const wordInput = document.getElementById('wordInput');
+        const freeInput = document.getElementById('freeInput');
+
+        if (wordInput) {
+            wordInput.addEventListener('keydown', (e) => this.handleKeyInput(e));
+            wordInput.addEventListener('input', (e) => this.handleInputChange(e));
+        }
+
+        if (freeInput) {
+            freeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.speakFreeInput();
+                }
+            });
         }
     }
 
@@ -51,11 +90,20 @@ class PalabrasGame {
 
     async startGame(difficulty) {
         try {
+            if (difficulty === 'libre') {
+                this.showScreen('freePlayScreen');
+                const freeInput = document.getElementById('freeInput');
+                if (freeInput) {
+                    freeInput.focus();
+                }
+                return;
+            }
+
             this.gameMode = difficulty;
             const response = await fetch(`/api/words/${difficulty}`);
             const data = await response.json();
             
-            this.currentWords = this.shuffleArray([...data.words]).slice(0, this.questionsPerGame);
+            this.currentWords = this.shuffleArray([...data.words]);
             this.currentQuestion = 0;
             this.score = 0;
             
@@ -83,135 +131,176 @@ class PalabrasGame {
             return;
         }
 
-        const word = this.currentWords[this.currentQuestion];
-        const questionType = Math.random() < 0.5 ? 'word-to-image' : 'image-to-word';
-        
+        this.currentWord = this.currentWords[this.currentQuestion];
         this.clearPreviousQuestion();
+        this.displayQuestion();
+        this.setupWordInput();
         
-        if (questionType === 'word-to-image') {
-            this.showWordToImageQuestion(word);
-        } else {
-            this.showImageToWordQuestion(word);
-        }
+        setTimeout(() => {
+            this.speakWord(this.currentWord.palabra);
+        }, 500);
     }
 
     clearPreviousQuestion() {
-        const optionsContainer = document.getElementById('optionsContainer');
         const nextBtn = document.getElementById('nextBtn');
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        const wordInput = document.getElementById('wordInput');
         
-        optionsContainer.innerHTML = '';
-        nextBtn.classList.add('hidden');
+        if (nextBtn) nextBtn.classList.add('hidden');
+        if (feedbackMessage) {
+            feedbackMessage.textContent = '';
+            feedbackMessage.className = 'feedback-message';
+        }
+        if (wordInput) {
+            wordInput.value = '';
+            wordInput.disabled = false;
+        }
     }
 
-    showWordToImageQuestion(correctWord) {
+    displayQuestion() {
         const questionText = document.getElementById('questionText');
         const questionImage = document.getElementById('questionImage');
         
-        questionText.textContent = `¿Cuál es ${correctWord.palabra}?`;
-        questionImage.innerHTML = '';
-        
-        const wrongWords = this.getRandomWrongWords(correctWord, 3);
-        const allOptions = this.shuffleArray([correctWord, ...wrongWords]);
-        
-        this.createImageOptions(allOptions, correctWord);
-    }
-
-    showImageToWordQuestion(correctWord) {
-        const questionText = document.getElementById('questionText');
-        const questionImage = document.getElementById('questionImage');
-        
-        questionText.textContent = '¿Qué palabra es?';
-        questionImage.innerHTML = `
-            <div class="placeholder-image">
-                📷 ${correctWord.palabra}
-            </div>
-        `;
-        
-        const wrongWords = this.getRandomWrongWords(correctWord, 3);
-        const allOptions = this.shuffleArray([correctWord, ...wrongWords]);
-        
-        this.createWordOptions(allOptions, correctWord);
-    }
-
-    getRandomWrongWords(correctWord, count) {
-        const availableWords = this.words.filter(word => 
-            word.palabra !== correctWord.palabra
-        );
-        
-        const shuffled = this.shuffleArray(availableWords);
-        return shuffled.slice(0, count);
-    }
-
-    createImageOptions(options, correctWord) {
-        const container = document.getElementById('optionsContainer');
-        
-        options.forEach(word => {
-            const button = document.createElement('button');
-            button.className = 'option-btn';
-            button.onclick = () => this.checkAnswer(word, correctWord, button);
-            
-            button.innerHTML = `
-                <div class="option-image">
-                    <div class="placeholder-image">📷</div>
-                </div>
-                <span>${word.palabra}</span>
-            `;
-            
-            container.appendChild(button);
-        });
-    }
-
-    createWordOptions(options, correctWord) {
-        const container = document.getElementById('optionsContainer');
-        
-        options.forEach(word => {
-            const button = document.createElement('button');
-            button.className = 'option-btn';
-            button.onclick = () => this.checkAnswer(word, correctWord, button);
-            
-            button.innerHTML = `<span>${word.palabra}</span>`;
-            
-            container.appendChild(button);
-        });
-    }
-
-    checkAnswer(selectedWord, correctWord, buttonElement) {
-        const allButtons = document.querySelectorAll('.option-btn');
-        const nextBtn = document.getElementById('nextBtn');
-        
-        allButtons.forEach(btn => {
-            btn.onclick = null;
-            btn.style.pointerEvents = 'none';
-        });
-
-        if (selectedWord.palabra === correctWord.palabra) {
-            buttonElement.classList.add('correct');
-            this.score++;
-            this.playCorrectSound();
-        } else {
-            buttonElement.classList.add('incorrect');
-            this.highlightCorrectAnswer(correctWord);
-            this.playIncorrectSound();
+        if (questionText) {
+            questionText.textContent = 'Escucha y escribe la palabra:';
         }
 
-        nextBtn.classList.remove('hidden');
-    }
-
-    highlightCorrectAnswer(correctWord) {
-        const allButtons = document.querySelectorAll('.option-btn');
-        allButtons.forEach(btn => {
-            if (btn.textContent.includes(correctWord.palabra)) {
-                btn.classList.add('correct');
+        if (questionImage && this.currentWord) {
+            if (this.currentWord.imagen.startsWith('color:')) {
+                const color = this.currentWord.imagen.replace('color:', '');
+                questionImage.innerHTML = `
+                    <div class="color-display" style="background-color: ${color};">
+                        ${this.currentWord.palabra.toUpperCase()}
+                    </div>
+                `;
+            } else {
+                questionImage.innerHTML = `
+                    <img src="${this.currentWord.imagen}" alt="${this.currentWord.palabra}" />
+                `;
             }
-        });
+        }
     }
 
-    playCorrectSound() {
-        console.log('🎉 ¡Correcto!');
+    setupWordInput() {
+        const wordInput = document.getElementById('wordInput');
+        const hintText = document.getElementById('hintText');
+        
+        if (!wordInput || !this.currentWord) return;
+
+        const palabra = this.currentWord.palabra.toLowerCase();
+        wordInput.maxLength = palabra.length;
+        wordInput.value = '';
+        
+        if (this.gameMode === 'facil' && hintText) {
+            hintText.textContent = palabra.toUpperCase();
+            hintText.style.display = 'block';
+        } else if (hintText) {
+            hintText.style.display = 'none';
+        }
+
+        wordInput.focus();
     }
 
-    playIncorrectSound() {
-        console.log('❌ Incorrecto');
+    handleKeyInput(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.validateAnswer();
+        }
+    }
+
+    handleInputChange(event) {
+        const input = event.target;
+        input.value = input.value.toLowerCase().replace(/[^a-záéíóúñü]/g, '');
+    }
+
+    validateAnswer() {
+        const wordInput = document.getElementById('wordInput');
+        if (!wordInput || !this.currentWord) return;
+
+        const userAnswer = wordInput.value.toLowerCase().trim();
+        const correctAnswer = this.currentWord.palabra.toLowerCase();
+
+        wordInput.disabled = true;
+
+        if (userAnswer === correctAnswer) {
+            this.handleCorrectAnswer();
+        } else {
+            this.handleIncorrectAnswer();
+        }
+    }
+
+    handleCorrectAnswer() {
+        this.score++;
+        this.showFeedback(true, '¡Muy bien, Olivia! 🎉');
+        this.speakWord('¡Muy bien!');
+        
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+            setTimeout(() => {
+                nextBtn.classList.remove('hidden');
+            }, 1000);
+        }
+    }
+
+    handleIncorrectAnswer() {
+        this.showFeedback(false, 'Inténtalo otra vez 💜');
+        this.speakWord('Inténtalo otra vez');
+        
+        setTimeout(() => {
+            const wordInput = document.getElementById('wordInput');
+            if (wordInput) {
+                wordInput.disabled = false;
+                wordInput.value = '';
+                wordInput.focus();
+            }
+            this.clearFeedback();
+        }, 2000);
+    }
+
+    showFeedback(isCorrect, message) {
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        if (!feedbackMessage) return;
+
+        feedbackMessage.textContent = message;
+        feedbackMessage.className = `feedback-message ${isCorrect ? 'feedback-success' : 'feedback-error'}`;
+    }
+
+    clearFeedback() {
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        if (feedbackMessage) {
+            feedbackMessage.textContent = '';
+            feedbackMessage.className = 'feedback-message';
+        }
+    }
+
+    speakWord(text) {
+        if (!this.speechSynthesis) return;
+
+        this.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'es-ES';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.2;
+        
+        if (this.spanishVoice) {
+            utterance.voice = this.spanishVoice;
+        }
+        
+        this.speechSynthesis.speak(utterance);
+    }
+
+    speakCurrentWord() {
+        if (this.currentWord) {
+            this.speakWord(this.currentWord.palabra);
+        }
+    }
+
+    speakFreeInput() {
+        const freeInput = document.getElementById('freeInput');
+        if (freeInput && freeInput.value.trim()) {
+            this.speakWord(freeInput.value.trim());
+        }
     }
 
     nextQuestion() {
@@ -231,7 +320,7 @@ class PalabrasGame {
     }
 
     showResults() {
-        const starsEarned = Math.floor(this.score / 2);
+        const starsEarned = Math.floor(this.score / 3);
         this.totalStars += starsEarned;
         this.saveStarsToStorage();
         this.updateStarCounter();
@@ -240,10 +329,20 @@ class PalabrasGame {
         document.getElementById('starsEarned').textContent = starsEarned;
         
         this.showScreen('resultsScreen');
+        
+        setTimeout(() => {
+            if (this.score >= this.currentWords.length * 0.8) {
+                this.speakWord('¡Excelente trabajo, Olivia!');
+            } else if (this.score >= this.currentWords.length * 0.6) {
+                this.speakWord('¡Muy bien, Olivia!');
+            } else {
+                this.speakWord('¡Sigue practicando, Olivia!');
+            }
+        }, 500);
     }
 
     showScreen(screenId) {
-        const screens = ['startScreen', 'gameScreen', 'resultsScreen'];
+        const screens = ['startScreen', 'gameScreen', 'freePlayScreen', 'resultsScreen'];
         screens.forEach(screen => {
             const element = document.getElementById(screen);
             if (element) {
@@ -258,6 +357,8 @@ class PalabrasGame {
 
     goBack() {
         this.showScreen('startScreen');
+        this.currentWord = null;
+        this.clearFeedback();
     }
 }
 
@@ -282,5 +383,17 @@ function nextQuestion() {
 function goBack() {
     if (game) {
         game.goBack();
+    }
+}
+
+function speakCurrentWord() {
+    if (game) {
+        game.speakCurrentWord();
+    }
+}
+
+function speakFreeInput() {
+    if (game) {
+        game.speakFreeInput();
     }
 }
