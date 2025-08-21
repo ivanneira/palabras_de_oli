@@ -5,6 +5,8 @@ class PalabrasGame {
         this.currentQuestion = 0;
         this.score = 0;
         this.totalStars = 0;
+        this.contadorRacha = 0;
+        this.maxRacha = 0;
         this.gameMode = '';
         this.currentWord = null;
         this.speechSynthesis = window.speechSynthesis;
@@ -21,8 +23,8 @@ class PalabrasGame {
     async initializeGame() {
         try {
             await this.loadWords();
-            this.loadStarsFromStorage();
-            this.updateStarCounter();
+            await this.loadPointsFromAPI();
+            this.updateDisplays();
             this.setupVoices();
             this.setupEventListeners();
             this.loadAudioFiles();
@@ -97,19 +99,83 @@ class PalabrasGame {
         }
     }
 
-    loadStarsFromStorage() {
-        const savedStars = localStorage.getItem('olivia-stars');
-        this.totalStars = savedStars ? parseInt(savedStars) : 0;
+    async loadPointsFromAPI() {
+        try {
+            const response = await fetch('/api/points');
+            const data = await response.json();
+            this.totalStars = data.totalStars || 0;
+            this.contadorRacha = data.currentStreak || 0;
+            this.maxRacha = data.maxStreak || 0;
+            
+            // Backup en localStorage
+            localStorage.setItem('olivia-points', JSON.stringify(data));
+        } catch (error) {
+            console.error('Error loading points from API:', error);
+            // Fallback a localStorage
+            const savedData = localStorage.getItem('olivia-points');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                this.totalStars = data.totalStars || 0;
+                this.contadorRacha = data.currentStreak || 0;
+                this.maxRacha = data.maxStreak || 0;
+            }
+        }
     }
 
-    saveStarsToStorage() {
-        localStorage.setItem('olivia-stars', this.totalStars.toString());
+    async savePointsToAPI() {
+        const pointsData = {
+            totalStars: this.totalStars,
+            currentStreak: this.contadorRacha,
+            maxStreak: this.maxRacha
+        };
+
+        try {
+            await fetch('/api/points', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(pointsData)
+            });
+            
+            // Backup en localStorage
+            localStorage.setItem('olivia-points', JSON.stringify(pointsData));
+        } catch (error) {
+            console.error('Error saving points to API:', error);
+            // Guardar solo en localStorage si falla la API
+            localStorage.setItem('olivia-points', JSON.stringify(pointsData));
+        }
+    }
+
+    updateDisplays() {
+        this.updateStarCounter();
+        this.updateStreakCounter();
     }
 
     updateStarCounter() {
         const counterElement = document.getElementById('starCounter');
         if (counterElement) {
             counterElement.textContent = this.totalStars;
+        }
+    }
+
+    updateStreakCounter() {
+        const streakElement = document.getElementById('streakCounter');
+        if (streakElement) {
+            streakElement.textContent = this.contadorRacha;
+        }
+    }
+
+    animateStarGain() {
+        const starIcon = document.getElementById('starIcon');
+        if (starIcon) {
+            starIcon.classList.remove('star-animate');
+            setTimeout(() => {
+                starIcon.classList.add('star-animate');
+                setTimeout(() => {
+                    starIcon.classList.remove('star-animate');
+                }, 1000);
+            }, 10);
         }
     }
 
@@ -258,8 +324,27 @@ class PalabrasGame {
 
     handleCorrectAnswer() {
         this.score++;
+        this.totalStars++;
+        this.contadorRacha++;
+        
+        // Actualizar racha máxima
+        if (this.contadorRacha > this.maxRacha) {
+            this.maxRacha = this.contadorRacha;
+        }
+        
+        // Animar estrella
+        this.animateStarGain();
+        
+        // Verificar hitos de racha
+        this.checkStreakMilestones();
+        
+        // Mostrar feedback normal
         this.showFeedback(true, '¡Muy bien, Olivia! 🎉');
         this.playWinSound();
+        
+        // Actualizar displays y guardar
+        this.updateDisplays();
+        this.savePointsToAPI();
         
         const nextBtn = document.getElementById('nextBtn');
         if (nextBtn) {
@@ -270,8 +355,15 @@ class PalabrasGame {
     }
 
     handleIncorrectAnswer() {
+        // Resetear racha
+        this.contadorRacha = 0;
+        
         this.showFeedback(false, 'Inténtalo otra vez 💜');
         this.playLoseSound();
+        
+        // Actualizar displays y guardar
+        this.updateDisplays();
+        this.savePointsToAPI();
         
         setTimeout(() => {
             const wordInput = document.getElementById('wordInput');
@@ -282,6 +374,66 @@ class PalabrasGame {
             }
             this.clearFeedback();
         }, 2000);
+    }
+
+    checkStreakMilestones() {
+        if (this.contadorRacha === 5) {
+            setTimeout(() => {
+                this.showStreakMessage('¡Súper Olivia! 5 seguidos! 🌈');
+                this.speakWord('¡Súper Olivia! 5 seguidos!');
+            }, 1500);
+        } else if (this.contadorRacha === 10) {
+            setTimeout(() => {
+                this.showStreakMessage('¡INCREÍBLE OLIVIA! ¡10 PERFECTOS! 🎊🦄✨');
+                this.speakWord('¡Increíble Olivia! 10 perfectos!');
+                this.showConfetti();
+                // Reiniciar racha tras 10
+                setTimeout(() => {
+                    this.contadorRacha = 0;
+                    this.updateDisplays();
+                    this.savePointsToAPI();
+                }, 3000);
+            }, 1500);
+        }
+    }
+
+    showStreakMessage(message) {
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        if (feedbackMessage) {
+            const originalContent = feedbackMessage.textContent;
+            const originalClass = feedbackMessage.className;
+            
+            feedbackMessage.textContent = message;
+            feedbackMessage.className = 'feedback-message feedback-success';
+            
+            setTimeout(() => {
+                feedbackMessage.textContent = originalContent;
+                feedbackMessage.className = originalClass;
+            }, 3000);
+        }
+    }
+
+    showConfetti() {
+        const container = document.getElementById('confetti-container');
+        if (!container) return;
+        
+        // Limpiar confetti anterior
+        container.innerHTML = '';
+        
+        // Crear 100 piezas de confetti
+        for (let i = 0; i < 100; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.animationDelay = Math.random() * 3 + 's';
+            confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            container.appendChild(confetti);
+        }
+        
+        // Limpiar después de 6 segundos
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 6000);
     }
 
     updateListenButton() {
@@ -390,11 +542,8 @@ class PalabrasGame {
     }
 
     showResults() {
-        const starsEarned = Math.floor(this.score / 3);
-        this.totalStars += starsEarned;
-        this.saveStarsToStorage();
-        this.updateStarCounter();
-
+        const starsEarned = this.score; // Ya se agregaron durante el juego
+        
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('starsEarned').textContent = starsEarned;
         
