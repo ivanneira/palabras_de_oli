@@ -15,7 +15,11 @@ class PalabrasGame {
         };
         this.speechSynthesis = window.speechSynthesis;
         this.spanishVoice = null;
-        this.listenCount = 3;
+        this.listenCount = 3; // Se configurará dinámicamente por modo
+        
+        // Configuración centralizada
+        this.config = window.AppConfig || {};
+        this.loadConfig();
         this.preloadedImages = new Map();
         this.audioFiles = {
             win: null,
@@ -42,6 +46,51 @@ class PalabrasGame {
         
         this.initializeGame();
     }
+
+    // Cargar configuración
+    loadConfig() {
+        // Escuchar cambios de configuración
+        if (typeof window !== 'undefined') {
+            window.addEventListener('configUpdated', (event) => {
+                this.handleConfigUpdate(event.detail.path, event.detail.value);
+            });
+        }
+        
+    }
+
+    // Manejar actualizaciones de configuración
+    handleConfigUpdate(path, value) {
+        console.log(`Configuración actualizada: ${path} = ${value}`);
+        
+        // Recargar configuraciones específicas según el path
+        if (path.startsWith('voice.')) {
+            this.setupVoices();
+        } else if (path.startsWith('audio.')) {
+            this.updateAudioVolumes();
+        }
+    }
+
+    // Obtener valor de configuración con fallback
+    getConfigValue(path, defaultValue = null) {
+        if (typeof window.getConfig === 'function') {
+            return window.getConfig(path, defaultValue);
+        }
+        
+        // Fallback manual si no está disponible la función
+        const keys = path.split('.');
+        let current = this.config;
+        
+        for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+                current = current[key];
+            } else {
+                return defaultValue;
+            }
+        }
+        
+        return current;
+    }
+
 
     // Función para normalizar acentos (león = leon)
     normalizeText(text) {
@@ -92,11 +141,29 @@ class PalabrasGame {
     setupVoices() {
         const setVoice = () => {
             const voices = this.speechSynthesis.getVoices();
-            this.spanishVoice = voices.find(voice => 
-                voice.lang.includes('es') || 
-                voice.name.toLowerCase().includes('spanish') ||
-                voice.name.toLowerCase().includes('español')
-            ) || voices[0];
+            const preferredVoices = this.getConfigValue('voice.preferredVoices', [
+                'es-ES-Female', 'Spanish (Spain)', 'Microsoft Helena', 'Google español'
+            ]);
+            
+            // Buscar voz preferida
+            let selectedVoice = null;
+            for (const preferred of preferredVoices) {
+                selectedVoice = voices.find(voice => 
+                    voice.name.toLowerCase().includes(preferred.toLowerCase())
+                );
+                if (selectedVoice) break;
+            }
+            
+            // Fallback a cualquier voz en español
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => 
+                    voice.lang.includes('es') || 
+                    voice.name.toLowerCase().includes('spanish') ||
+                    voice.name.toLowerCase().includes('español')
+                );
+            }
+            
+            this.spanishVoice = selectedVoice || voices[0];
         };
 
         if (this.speechSynthesis.getVoices().length === 0) {
@@ -116,20 +183,37 @@ class PalabrasGame {
         };
 
         Promise.all([
-            loadAudio('win.wav'),
-            loadAudio('lose.wav'),
             loadAudio('shine.mp3'),
             loadAudio('break.mp3'),
             loadAudio('win.mp3'),
             loadAudio('applause.mp3')
-        ]).then(([winAudio, loseAudio, shineAudio, breakAudio, winStreakAudio, applauseAudio]) => {
-            this.audioFiles.win = winAudio;
-            this.audioFiles.lose = loseAudio;
-            this.audioFiles.shine = shineAudio;
-            this.audioFiles.break = breakAudio;
-            this.audioFiles.winStreak = winStreakAudio;
-            this.audioFiles.applause = applauseAudio;
+        ]).then(([shineAudio, breakAudio, winStreakAudio, applauseAudio]) => {
+            // Mapear correctamente los sonidos
+            this.audioFiles.win = shineAudio;      // shine.mp3 para respuestas correctas
+            this.audioFiles.lose = breakAudio;     // break.mp3 para respuestas incorrectas
+            this.audioFiles.shine = shineAudio;    // shine.mp3 original
+            this.audioFiles.break = breakAudio;    // break.mp3 original
+            this.audioFiles.winStreak = winStreakAudio; // win.mp3 para rachas
+            this.audioFiles.applause = applauseAudio;   // applause.mp3 para celebraciones
+            
+            // Configurar volúmenes iniciales
+            this.updateAudioVolumes();
         });
+    }
+
+    updateAudioVolumes() {
+        const volumes = this.getConfigValue('audio.volumes', {
+            effects: 0.8,
+            voice: 1.0,
+            applause: 0.9
+        });
+
+        if (this.audioFiles.win) this.audioFiles.win.volume = volumes.effects;
+        if (this.audioFiles.lose) this.audioFiles.lose.volume = volumes.effects;
+        if (this.audioFiles.shine) this.audioFiles.shine.volume = volumes.effects;
+        if (this.audioFiles.break) this.audioFiles.break.volume = volumes.effects;
+        if (this.audioFiles.winStreak) this.audioFiles.winStreak.volume = volumes.effects;
+        if (this.audioFiles.applause) this.audioFiles.applause.volume = volumes.applause;
     }
 
     setupEventListeners() {
@@ -380,11 +464,23 @@ class PalabrasGame {
         }
 
         this.currentWord = this.currentWords[this.currentQuestion];
-        this.listenCount = 3;
+        
+        // Configurar cantidad de pistas auditivas según el modo
+        const listenConfig = this.getConfigValue(`game.modes.${this.gameMode}.listenCount`, 3);
+        this.listenCount = listenConfig;
+        
         this.clearPreviousQuestion();
         this.displayQuestion();
         this.setupWordInput();
         this.updateListenButton();
+        
+        // Reproducir automáticamente si está configurado
+        const playOnStart = this.getConfigValue('game.audioHints.playOnStart', false);
+        if (playOnStart && this.currentWord) {
+            setTimeout(() => {
+                this.speakWord(this.currentWord.palabra);
+            }, 500); // Pequeño delay para mejor UX
+        }
         
         // Precargar la siguiente imagen si existe
         if (this.currentQuestion + 1 < this.currentWords.length) {
@@ -449,18 +545,65 @@ class PalabrasGame {
         wordInput.maxLength = palabra.length;
         wordInput.value = '';
         
+        // Configurar pistas
         if (hintText) {
             hintText.textContent = palabra.toUpperCase();
             hintText.style.display = 'block';
             
-            if (this.gameMode === 'facil') {
-                hintText.style.opacity = '0.4';
-            } else if (this.gameMode === 'dificil') {
-                hintText.style.opacity = '0.15';
-            }
+            // Usar opacidad fija de 0.6 para ambos modos
+            hintText.style.opacity = '0.6';
         }
+        
+        // Configurar input para que el texto empiece alineado con las pistas
+        this.setupInputAlignment(wordInput, palabra);
+        
+        // Limpiar listeners anteriores si existen
+        if (wordInput._alignmentHandler) {
+            wordInput.removeEventListener('input', wordInput._alignmentHandler);
+        }
+        
+        // Agregar nuevo listener para reajustar mientras se escribe
+        wordInput._alignmentHandler = () => {
+            this.adjustInputAlignment();
+        };
+        wordInput.addEventListener('input', wordInput._alignmentHandler);
 
         wordInput.focus();
+    }
+
+    setupInputAlignment(input, palabra) {
+        // Resetear el padding izquierdo al valor original para evitar acumulación
+        input.style.paddingLeft = '';
+        
+        // Crear elemento temporal para medir el ancho del texto completo de la pista
+        const tempSpan = document.createElement('span');
+        tempSpan.style.visibility = 'hidden';
+        tempSpan.style.position = 'absolute';
+        tempSpan.style.fontSize = getComputedStyle(input).fontSize;
+        tempSpan.style.fontFamily = getComputedStyle(input).fontFamily;
+        tempSpan.style.fontWeight = getComputedStyle(input).fontWeight;
+        tempSpan.style.letterSpacing = getComputedStyle(input).letterSpacing;
+        tempSpan.textContent = palabra.toUpperCase();
+        
+        document.body.appendChild(tempSpan);
+        const fullTextWidth = tempSpan.getBoundingClientRect().width;
+        document.body.removeChild(tempSpan);
+        
+        // Calcular el padding izquierdo para centrar el inicio del texto con la pista
+        const inputWidth = input.getBoundingClientRect().width;
+        const originalPaddingLeft = parseFloat(getComputedStyle(input).paddingLeft);
+        const paddingRight = parseFloat(getComputedStyle(input).paddingRight);
+        const availableWidth = inputWidth - originalPaddingLeft - paddingRight;
+        const startPosition = (availableWidth - fullTextWidth) / 2;
+        
+        // Aplicar el padding calculado
+        input.style.paddingLeft = Math.max(startPosition + originalPaddingLeft, 24) + 'px';
+        input.style.textAlign = 'left';
+    }
+
+    adjustInputAlignment() {
+        // Esta función se puede usar para ajustes dinámicos si es necesario
+        // Por ahora mantiene la alineación inicial
     }
 
     handleKeyInput(event) {
@@ -632,14 +775,32 @@ class PalabrasGame {
         const listenCountSpan = document.getElementById('listenCount');
         
         if (listenBtn && listenCountSpan) {
-            listenCountSpan.textContent = this.listenCount;
-            listenBtn.disabled = this.listenCount <= 0;
+            // Configuración de audio hints
+            const showCount = this.getConfigValue('game.audioHints.showRemainingCount', true);
+            const disableWhenExhausted = this.getConfigValue('game.audioHints.disableWhenExhausted', true);
+            
+            // Mostrar contador o texto según configuración
+            if (this.listenCount === -1) {
+                // Modo ilimitado (modo libre)
+                listenCountSpan.textContent = '∞';
+                listenBtn.disabled = false;
+            } else if (showCount) {
+                listenCountSpan.textContent = this.listenCount;
+                listenBtn.disabled = disableWhenExhausted && this.listenCount <= 0;
+            } else {
+                listenCountSpan.textContent = this.listenCount > 0 ? '🔊' : '🔇';
+                listenBtn.disabled = disableWhenExhausted && this.listenCount <= 0;
+            }
         }
     }
 
     listenToWord() {
-        if (this.listenCount > 0 && this.currentWord) {
-            this.listenCount--;
+        if (this.currentWord && (this.listenCount > 0 || this.listenCount === -1)) {
+            // Solo decrementar si no es ilimitado (-1)
+            if (this.listenCount > 0) {
+                this.listenCount--;
+            }
+            
             this.updateListenButton();
             this.speakWord(this.currentWord.palabra);
         }
@@ -724,17 +885,26 @@ class PalabrasGame {
 
         this.speechSynthesis.cancel();
         
-        // Añadir exclamaciones para hacer más expresivo
+        // Configuración de voz desde config
+        const voiceConfig = this.getConfigValue('voice', {
+            language: 'es-ES',
+            rate: 0.4,
+            pitch: 2.0,
+            volume: 1.0,
+            addExclamations: true
+        });
+        
+        // Añadir exclamaciones si está habilitado
         let expressiveText = text;
-        if (!text.includes('¡') && !text.includes('!')) {
+        if (voiceConfig.addExclamations && !text.includes('¡') && !text.includes('!')) {
             expressiveText = `¡${text}!`;
         }
         
         const utterance = new SpeechSynthesisUtterance(expressiveText);
-        utterance.lang = 'es-ES';
-        utterance.rate = 0.4; // Más lenta
-        utterance.pitch = 2; // Más aguda
-        utterance.volume = 1.0;
+        utterance.lang = voiceConfig.language;
+        utterance.rate = voiceConfig.rate;
+        utterance.pitch = voiceConfig.pitch;
+        utterance.volume = voiceConfig.volume * this.getConfigValue('audio.volumes.voice', 1.0);
         
         if (this.spanishVoice) {
             utterance.voice = this.spanishVoice;
@@ -919,6 +1089,7 @@ let game;
 
 window.addEventListener('DOMContentLoaded', () => {
     game = new PalabrasGame();
+    
 });
 
 function startGame(difficulty) {
