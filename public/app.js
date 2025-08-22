@@ -57,6 +57,8 @@ class PalabrasGame {
         // Configuración de personalización
         this.childName = 'Olivia';
         this.selectedVoice = null;
+        this.voiceRate = 0.4; // Velocidad por defecto infantil
+        this.voicePitch = 2.0; // Pitch alto por defecto para niños
         
         // 10 mensajes personalizados random que usarán el nombre dinámico
         this.randomMessages = [
@@ -185,6 +187,9 @@ class PalabrasGame {
             
             // Cargar configuración de personalización
             await this.loadPersonalizationSettings();
+            
+            // Configurar controles de voz
+            this.setupVoiceControls();
             
             this.updateDisplays();
             this.setupVoices();
@@ -468,6 +473,8 @@ class PalabrasGame {
             if (settings) {
                 this.childName = settings.childName || 'Olivia';
                 this.selectedVoice = settings.selectedVoice || null;
+                this.voiceRate = settings.voiceRate || 0.4;
+                this.voicePitch = settings.voicePitch || 2.0;
                 // Actualizar títulos con el nombre cargado
                 setTimeout(() => this.updateDynamicTitles(), 100);
             }
@@ -482,7 +489,9 @@ class PalabrasGame {
     savePersonalizationSettings() {
         const settings = {
             childName: this.childName,
-            selectedVoice: this.selectedVoice
+            selectedVoice: this.selectedVoice,
+            voiceRate: this.voiceRate,
+            voicePitch: this.voicePitch
         };
         
         try {
@@ -568,6 +577,216 @@ class PalabrasGame {
         }
     }
 
+    // ===== CONTROLES DE VOZ AVANZADOS =====
+    setupVoiceControls() {
+        // Configurar sliders de velocidad y pitch
+        this.setupSlider('voiceRate', 'rateValue', (value) => {
+            this.voiceRate = parseFloat(value);
+            this.savePersonalizationSettings();
+        });
+
+        this.setupSlider('voicePitch', 'pitchValue', (value) => {
+            this.voicePitch = parseFloat(value);
+            this.savePersonalizationSettings();
+        });
+
+        // Configurar sliders del modal de ayuda
+        this.setupSlider('helpVoiceRate', 'helpRateValue', (value) => {
+            this.voiceRate = parseFloat(value);
+            this.syncVoiceControlValues();
+            this.savePersonalizationSettings();
+        });
+
+        this.setupSlider('helpVoicePitch', 'helpPitchValue', (value) => {
+            this.voicePitch = parseFloat(value);
+            this.syncVoiceControlValues();
+            this.savePersonalizationSettings();
+        });
+
+        // Configurar botones de previsualización
+        this.setupPreviewButton('previewVoiceBtn');
+        this.setupPreviewButton('helpPreviewVoiceBtn');
+
+        // Configurar clics en marcadores de slider
+        this.setupSliderMarkers();
+    }
+
+    setupSlider(sliderId, valueId, onChange) {
+        const slider = document.getElementById(sliderId);
+        const valueSpan = document.getElementById(valueId);
+
+        if (!slider || !valueSpan) return;
+
+        // Establecer valor inicial
+        slider.value = sliderId.includes('Rate') ? this.voiceRate : this.voicePitch;
+        valueSpan.textContent = slider.value;
+
+        // Event listener para cambios
+        slider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            valueSpan.textContent = value;
+            
+            // Animación de feedback
+            slider.classList.add('updating');
+            setTimeout(() => slider.classList.remove('updating'), 300);
+            
+            // Callback
+            if (onChange) onChange(value);
+        });
+
+        // Previsualización automática al soltar el slider
+        slider.addEventListener('change', () => {
+            this.previewVoiceWithCurrentSettings();
+        });
+    }
+
+    setupPreviewButton(buttonId) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+
+        button.addEventListener('click', () => {
+            this.previewVoiceWithCurrentSettings();
+        });
+    }
+
+    setupSliderMarkers() {
+        // Agregar event listeners a todos los marcadores de slider
+        const markers = document.querySelectorAll('.marker');
+        markers.forEach(marker => {
+            marker.addEventListener('click', () => {
+                const value = parseFloat(marker.dataset.value);
+                const sliderContainer = marker.closest('.voice-control-group');
+                const slider = sliderContainer?.querySelector('.voice-slider');
+                
+                if (slider) {
+                    slider.value = value;
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                    slider.dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    // Animación de marcador seleccionado
+                    marker.style.transform = 'translateY(-2px) scale(1.1)';
+                    setTimeout(() => {
+                        marker.style.transform = '';
+                    }, 200);
+                }
+            });
+        });
+    }
+
+    syncVoiceControlValues() {
+        // Sincronizar todos los controles de voz con los valores actuales
+        const rateSlider = document.getElementById('voiceRate');
+        const pitchSlider = document.getElementById('voicePitch');
+        const helpRateSlider = document.getElementById('helpVoiceRate');
+        const helpPitchSlider = document.getElementById('helpVoicePitch');
+        
+        const rateValue = document.getElementById('rateValue');
+        const pitchValue = document.getElementById('pitchValue');
+        const helpRateValue = document.getElementById('helpRateValue');
+        const helpPitchValue = document.getElementById('helpPitchValue');
+
+        // Actualizar sliders principales
+        if (rateSlider && rateValue) {
+            rateSlider.value = this.voiceRate;
+            rateValue.textContent = this.voiceRate;
+        }
+        if (pitchSlider && pitchValue) {
+            pitchSlider.value = this.voicePitch;
+            pitchValue.textContent = this.voicePitch;
+        }
+
+        // Actualizar sliders del modal de ayuda
+        if (helpRateSlider && helpRateValue) {
+            helpRateSlider.value = this.voiceRate;
+            helpRateValue.textContent = this.voiceRate;
+        }
+        if (helpPitchSlider && helpPitchValue) {
+            helpPitchSlider.value = this.voicePitch;
+            helpPitchValue.textContent = this.voicePitch;
+        }
+    }
+
+    previewVoiceWithCurrentSettings() {
+        const previewText = `¡Hola ${this.childName}! Esta es mi voz.`;
+        console.log(`🎵 Previsualización: "${previewText}" - Rate: ${this.voiceRate}, Pitch: ${this.voicePitch}`);
+        
+        // Usar voz seleccionada si existe
+        let selectedVoice = null;
+        if (this.selectedVoice) {
+            const voices = this.speechSynthesis.getVoices();
+            selectedVoice = voices.find(voice => voice.name === this.selectedVoice);
+        }
+        
+        this.speakWordWithCustomSettings(previewText, selectedVoice, this.voiceRate, this.voicePitch);
+    }
+
+    speakWordWithCustomSettings(text, voice = null, rate = null, pitch = null) {
+        if (!this.speechSynthesis) return;
+
+        // Cancelar cualquier síntesis anterior
+        this.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Usar configuración personalizada o valores por defecto
+        utterance.rate = rate !== null ? rate : this.voiceRate;
+        utterance.pitch = pitch !== null ? pitch : this.voicePitch;
+        utterance.volume = 1.0;
+        utterance.lang = 'es-ES';
+        
+        // Usar voz especificada o la voz seleccionada
+        if (voice) {
+            utterance.voice = voice;
+        } else if (this.spanishVoice) {
+            utterance.voice = this.spanishVoice;
+        }
+        
+        console.log(`🗣️ Hablando: "${text}" con rate=${utterance.rate}, pitch=${utterance.pitch}, voz=${utterance.voice?.name || 'default'}`);
+        
+        this.speechSynthesis.speak(utterance);
+    }
+
+    addVoicePreviewListener(voiceSelect, allVoices) {
+        if (!voiceSelect) return;
+
+        // Remover listener anterior si existe
+        const existingListener = voiceSelect.onchange;
+        if (existingListener) {
+            voiceSelect.removeEventListener('change', existingListener);
+        }
+
+        const changeHandler = () => {
+            const selectedVoiceName = voiceSelect.value;
+            
+            if (selectedVoiceName) {
+                // Encontrar la voz seleccionada
+                const selectedVoice = allVoices.find(voice => voice.name === selectedVoiceName);
+                
+                if (selectedVoice) {
+                    console.log(`🔄 Voz cambiada a: ${selectedVoice.name} (${selectedVoice.lang})`);
+                    
+                    // Actualizar voz seleccionada
+                    this.selectedVoice = selectedVoiceName;
+                    
+                    // Previsualizar con la nueva voz
+                    const previewText = `¡Hola ${this.childName}! Soy ${selectedVoice.name.split(' ')[0] || 'tu asistente'}.`;
+                    this.speakWordWithCustomSettings(previewText, selectedVoice, this.voiceRate, this.voicePitch);
+                    
+                    // Guardar configuración
+                    this.savePersonalizationSettings();
+                }
+            } else {
+                // Voz automática seleccionada
+                console.log(`🤖 Voz automática seleccionada`);
+                this.selectedVoice = null;
+                this.previewVoiceWithCurrentSettings();
+                this.savePersonalizationSettings();
+            }
+        };
+
+        voiceSelect.addEventListener('change', changeHandler);
+    }
+
     // ===== FUNCIONES DEL MODAL DE CONFIGURACIÓN =====
     showSettingsModal() {
         const modal = document.getElementById('settingsModal');
@@ -588,6 +807,9 @@ class PalabrasGame {
             };
             this.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
         }
+        
+        // Sincronizar controles de voz
+        this.syncVoiceControlValues();
         
         // Mostrar modal con animación
         modal.classList.add('show');
@@ -616,6 +838,9 @@ class PalabrasGame {
         
         // Actualizar estadísticas actuales
         this.updateHelpStats();
+        
+        // Sincronizar controles de voz
+        this.syncVoiceControlValues();
         
         // Mostrar modal con animación
         modal.classList.add('show');
@@ -757,6 +982,120 @@ class PalabrasGame {
         }
     }
 
+    // ===== DETECCIÓN AVANZADA DE VOCES REALES =====
+    filterRealVoices(allVoices) {
+        console.log('🔍 Analizando', allVoices.length, 'voces disponibles...');
+        
+        // Filtrar solo voces locales del sistema (más confiables)
+        const localVoices = allVoices.filter(voice => {
+            // localService true = voz real del sistema
+            // localService false = voz sintética online/fake
+            return voice.localService === true;
+        });
+        
+        console.log('🏠 Voces locales encontradas:', localVoices.length);
+        
+        if (localVoices.length === 0) {
+            console.log('⚠️ No hay voces locales, usando todas las disponibles');
+            // Fallback: si no hay locales, usar todas pero con filtrado de duplicados
+            return this.removeDuplicateVoices(allVoices);
+        }
+        
+        // Filtrar voces españolas primero
+        const spanishVoices = localVoices.filter(voice => {
+            const isSpanish = voice.lang.startsWith('es') || 
+                            voice.lang.startsWith('ES') ||
+                            voice.name.toLowerCase().includes('span') ||
+                            voice.name.toLowerCase().includes('español') ||
+                            voice.name.toLowerCase().includes('helena') ||
+                            voice.name.toLowerCase().includes('maria') ||
+                            voice.name.toLowerCase().includes('paloma') ||
+                            voice.name.toLowerCase().includes('jorge');
+            
+            console.log(`🗣️ ${voice.name} (${voice.lang}) - Español: ${isSpanish}, Local: ${voice.localService}`);
+            return isSpanish;
+        });
+        
+        console.log('🇪🇸 Voces españolas locales:', spanishVoices.length);
+        
+        if (spanishVoices.length > 0) {
+            return this.removeDuplicateVoices(spanishVoices);
+        } else {
+            // Si no hay españolas locales, usar las mejores voces locales disponibles
+            console.log('📢 No hay voces españolas locales, usando mejores voces locales');
+            return this.removeDuplicateVoices(localVoices.slice(0, 8));
+        }
+    }
+    
+    removeDuplicateVoices(voices) {
+        const uniqueVoices = [];
+        const seenCombinations = new Set();
+        
+        voices.forEach(voice => {
+            // Crear identificador único usando lang + nombre base (sin Microsoft/Google prefix)
+            const baseName = voice.name
+                .replace(/^(Microsoft |Google |Apple )/i, '')
+                .replace(/\s+\(.*\)$/, '') // Remover (Enhanced) etc
+                .trim();
+            
+            const uniqueId = `${voice.lang}-${baseName}`.toLowerCase();
+            
+            if (!seenCombinations.has(uniqueId)) {
+                seenCombinations.add(uniqueId);
+                uniqueVoices.push(voice);
+                console.log(`✅ Voz única añadida: ${voice.name} (${voice.lang}) - ID: ${uniqueId}`);
+            } else {
+                console.log(`🔄 Voz duplicada ignorada: ${voice.name} (${voice.lang}) - ID: ${uniqueId}`);
+            }
+        });
+        
+        console.log('🎯 Total voces únicas:', uniqueVoices.length);
+        return uniqueVoices;
+    }
+    
+    createFriendlyVoiceName(voice) {
+        let displayName = voice.name;
+        let emoji = '🗣️'; // Default emoji
+        
+        // Detectar género y personalidad por nombre
+        const nameLower = voice.name.toLowerCase();
+        
+        if (nameLower.includes('helena')) {
+            emoji = '🎭';
+            displayName = 'Helena (Española)';
+        } else if (nameLower.includes('maria') || nameLower.includes('maría')) {
+            emoji = '👩';
+            displayName = 'María (Española)';
+        } else if (nameLower.includes('paloma')) {
+            emoji = '🕊️';
+            displayName = 'Paloma (Española)';
+        } else if (nameLower.includes('jorge')) {
+            emoji = '👨';
+            displayName = 'Jorge (Español)';
+        } else if (nameLower.includes('carlos')) {
+            emoji = '🧑';
+            displayName = 'Carlos (Español)';
+        } else if (nameLower.includes('microsoft')) {
+            emoji = '🎤';
+            displayName = voice.name.replace(/Microsoft /i, '').trim();
+        } else if (nameLower.includes('google')) {
+            emoji = '🤖';
+            displayName = voice.name.replace(/Google /i, '').trim();
+        } else if (nameLower.includes('apple') || nameLower.includes('siri')) {
+            emoji = '🍎';
+            displayName = voice.name.replace(/Apple /i, '').trim();
+        } else {
+            // Detectar género por idioma y características del nombre
+            if (voice.lang.startsWith('es') && (nameLower.includes('female') || nameLower.includes('woman') || nameLower.includes('mujer'))) {
+                emoji = '👩';
+            } else if (voice.lang.startsWith('es') && (nameLower.includes('male') || nameLower.includes('man') || nameLower.includes('hombre'))) {
+                emoji = '👨';
+            }
+        }
+        
+        return `${emoji} ${displayName}`;
+    }
+
     populateVoiceSelect() {
         const voiceSelect = document.getElementById('voiceSelect');
         const voices = this.speechSynthesis.getVoices();
@@ -777,17 +1116,8 @@ class PalabrasGame {
             return;
         }
         
-        // Filtrar voces en español o agregar todas si no hay españolas
-        let spanishVoices = voices.filter(voice => 
-            voice.lang.startsWith('es') || 
-            voice.name.toLowerCase().includes('span') ||
-            voice.name.toLowerCase().includes('helena') ||
-            voice.name.toLowerCase().includes('maria')
-        );
-        
-        if (spanishVoices.length === 0) {
-            spanishVoices = voices.slice(0, 10); // Máximo 10 voces
-        }
+        // Usar filtrado avanzado de voces reales
+        const filteredVoices = this.filterRealVoices(voices);
         
         // Opción por defecto
         const defaultOption = document.createElement('option');
@@ -795,20 +1125,17 @@ class PalabrasGame {
         defaultOption.textContent = '🤖 Voz automática (recomendada)';
         voiceSelect.appendChild(defaultOption);
         
-        // Agregar voces disponibles
-        spanishVoices.forEach(voice => {
+        // Agregar voces filtradas con nombres amigables
+        filteredVoices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
+            option.textContent = this.createFriendlyVoiceName(voice);
             
-            // Nombres más amigables
-            let displayName = voice.name;
-            if (voice.name.includes('Helena')) displayName = '🎭 Helena (Mujer)';
-            else if (voice.name.includes('Maria')) displayName = '👩 María (Mujer)';
-            else if (voice.name.includes('Google')) displayName = `🗣️ ${voice.name.replace('Google ', '')}`;
-            else if (voice.name.includes('Microsoft')) displayName = `🎤 ${voice.name.replace('Microsoft ', '')}`;
-            else displayName = `🗣️ ${voice.name}`;
+            // Agregar información adicional como data attributes
+            option.dataset.lang = voice.lang;
+            option.dataset.localService = voice.localService;
+            option.dataset.voiceURI = voice.voiceURI || '';
             
-            option.textContent = displayName;
             voiceSelect.appendChild(option);
         });
         
@@ -816,6 +1143,9 @@ class PalabrasGame {
         if (this.selectedVoice) {
             voiceSelect.value = this.selectedVoice;
         }
+        
+        // Agregar event listener para previsualización
+        this.addVoicePreviewListener(voiceSelect, voices);
     }
 
     // Método para verificar compatibilidad de almacenamiento
@@ -1716,12 +2046,9 @@ class PalabrasGame {
             // Doble cancelación para máxima seguridad contra superposición
             this.speechSynthesis.cancel();
             
-            // Configuración de voz desde config (cached)
+            // Configuración de voz personalizada o por defecto
             const voiceConfig = this.getConfigValue('voice', {
                 language: 'es-ES',
-                rate: 0.4,
-                pitch: 2.0,
-                volume: 1.0,
                 addExclamations: true
             });
             
@@ -1733,9 +2060,11 @@ class PalabrasGame {
             
             const utterance = new SpeechSynthesisUtterance(expressiveText);
             utterance.lang = voiceConfig.language;
-            utterance.rate = voiceConfig.rate;
-            utterance.pitch = voiceConfig.pitch;
-            utterance.volume = voiceConfig.volume * this.getConfigValue('audio.volumes.voice', 1.0);
+            
+            // Usar configuración personalizada del usuario
+            utterance.rate = this.voiceRate || 0.4;
+            utterance.pitch = this.voicePitch || 2.0;
+            utterance.volume = this.getConfigValue('audio.volumes.voice', 1.0);
             
             // Usar voz personalizada si se proporciona, o la voz española por defecto
             if (customVoice) {

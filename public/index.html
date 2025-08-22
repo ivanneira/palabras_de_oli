@@ -42,8 +42,7 @@
                         <span class="streak-text">Racha:</span>
                         <span class="streak-number" id="streakCounter">0</span>
                     </div>
-                    <button class="reset-btn" onclick="resetPoints()" title="Reiniciar puntos">🔄</button>
-                    <button class="help-btn" onclick="showSettingsModal()" title="Configuración">❓</button>
+                    <button class="help-btn" onclick="showHelpModal()" title="Ayuda y configuración">❓</button>
                 </div>
             </div>
         </header>
@@ -182,6 +181,38 @@
                     </select>
                     <p class="settings-help">Esta voz pronunciará las palabras</p>
                 </div>
+
+                <div class="voice-controls">
+                    <div class="voice-control-group">
+                        <label for="voiceRate" class="control-label">
+                            <span class="label-icon">⏱️</span>
+                            Velocidad: <span id="rateValue">0.4</span>x
+                        </label>
+                        <input type="range" id="voiceRate" class="voice-slider" min="0.1" max="2.0" step="0.1" value="0.4">
+                        <div class="slider-markers">
+                            <span class="marker" data-value="0.5">Lenta</span>
+                            <span class="marker" data-value="1.0">Normal</span>
+                            <span class="marker" data-value="1.5">Rápida</span>
+                        </div>
+                    </div>
+
+                    <div class="voice-control-group">
+                        <label for="voicePitch" class="control-label">
+                            <span class="label-icon">🎵</span>
+                            Tono: <span id="pitchValue">2.0</span>
+                        </label>
+                        <input type="range" id="voicePitch" class="voice-slider" min="0.5" max="2.0" step="0.1" value="2.0">
+                        <div class="slider-markers">
+                            <span class="marker" data-value="1.0">Grave</span>
+                            <span class="marker" data-value="1.5">Normal</span>
+                            <span class="marker" data-value="2.0">Agudo</span>
+                        </div>
+                    </div>
+
+                    <button type="button" id="previewVoiceBtn" class="preview-voice-btn">
+                        🔊 Probar voz
+                    </button>
+                </div>
             </div>
             
             <div class="modal-footer">
@@ -191,6 +222,186 @@
                 <button class="modal-btn modal-btn-primary" onclick="saveSettings()">
                     ¡Listo! 🌟
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ayuda -->
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content help-modal-content">
+            <div class="modal-header">
+                <h2>Ayuda ❓</h2>
+                <button class="modal-close" onclick="hideHelpModal()" title="Cerrar">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Pestañas de navegación -->
+                <div class="help-tabs">
+                    <button class="help-tab active" data-tab="info" onclick="showHelpTab('info')">
+                        <span class="tab-icon">📖</span>
+                        <span class="tab-text">Información</span>
+                    </button>
+                    <button class="help-tab" data-tab="settings" onclick="showHelpTab('settings')">
+                        <span class="tab-icon">⚙️</span>
+                        <span class="tab-text">Configuración</span>
+                    </button>
+                    <button class="help-tab" data-tab="reset" onclick="showHelpTab('reset')">
+                        <span class="tab-icon">🔄</span>
+                        <span class="tab-text">Reiniciar</span>
+                    </button>
+                </div>
+
+                <!-- Contenido de la pestaña Información -->
+                <div class="help-content active" id="helpTabInfo">
+                    <div class="help-section">
+                        <h3>¡Aprende escribiendo palabras! 🌟</h3>
+                        <div class="help-info">
+                            <div class="info-item">
+                                <span class="info-icon">🐱</span>
+                                <div class="info-text">
+                                    <strong>Modo Fácil:</strong> 10 pistas de audio y ayuda visual
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🦁</span>
+                                <div class="info-text">
+                                    <strong>Modo Difícil:</strong> 5 pistas de audio y ayuda visual
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🌈</span>
+                                <div class="info-text">
+                                    <strong>Modo Libre:</strong> Escribe cualquier palabra y escúchala
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🔊</span>
+                                <div class="info-text">
+                                    <strong>Botón Escuchar:</strong> Presiona para oír la palabra
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">⭐</span>
+                                <div class="info-text">
+                                    <strong>Estrellas:</strong> Ganas puntos por cada palabra correcta
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🔥</span>
+                                <div class="info-text">
+                                    <strong>Racha:</strong> Respuestas correctas seguidas
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido de la pestaña Configuración -->
+                <div class="help-content" id="helpTabSettings">
+                    <div class="help-section">
+                        <h3>Personaliza tu experiencia ⚙️</h3>
+                        <div class="settings-section">
+                            <label for="helpChildName" class="settings-label">
+                                <span class="label-icon">✨</span>
+                                ¿Cómo te llamas?
+                            </label>
+                            <input 
+                                type="text" 
+                                id="helpChildName" 
+                                class="settings-input" 
+                                placeholder="Escribe tu nombre aquí..."
+                                maxlength="20"
+                            />
+                            <p class="settings-help">Te diremos tu nombre cuando juegues ❤️</p>
+                        </div>
+
+                        <div class="settings-section">
+                            <label for="helpVoiceSelect" class="settings-label">
+                                <span class="label-icon">🗣️</span>
+                                Elige la voz que más te guste
+                            </label>
+                            <select id="helpVoiceSelect" class="settings-select">
+                                <option value="">Buscando voces disponibles...</option>
+                            </select>
+                            <p class="settings-help">Esta voz pronunciará las palabras</p>
+                        </div>
+
+                        <div class="voice-controls">
+                            <div class="voice-control-group">
+                                <label for="helpVoiceRate" class="control-label">
+                                    <span class="label-icon">⏱️</span>
+                                    Velocidad: <span id="helpRateValue">0.4</span>x
+                                </label>
+                                <input type="range" id="helpVoiceRate" class="voice-slider" min="0.1" max="2.0" step="0.1" value="0.4">
+                                <div class="slider-markers">
+                                    <span class="marker" data-value="0.5">Lenta</span>
+                                    <span class="marker" data-value="1.0">Normal</span>
+                                    <span class="marker" data-value="1.5">Rápida</span>
+                                </div>
+                            </div>
+
+                            <div class="voice-control-group">
+                                <label for="helpVoicePitch" class="control-label">
+                                    <span class="label-icon">🎵</span>
+                                    Tono: <span id="helpPitchValue">2.0</span>
+                                </label>
+                                <input type="range" id="helpVoicePitch" class="voice-slider" min="0.5" max="2.0" step="0.1" value="2.0">
+                                <div class="slider-markers">
+                                    <span class="marker" data-value="1.0">Grave</span>
+                                    <span class="marker" data-value="1.5">Normal</span>
+                                    <span class="marker" data-value="2.0">Agudo</span>
+                                </div>
+                            </div>
+
+                            <button type="button" id="helpPreviewVoiceBtn" class="preview-voice-btn">
+                                🔊 Probar voz
+                            </button>
+                        </div>
+
+                        <div class="help-section-footer">
+                            <button class="modal-btn modal-btn-primary" onclick="saveHelpSettings()">
+                                ¡Guardar cambios! 🌟
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido de la pestaña Reiniciar -->
+                <div class="help-content" id="helpTabReset">
+                    <div class="help-section">
+                        <h3>Reiniciar progreso 🔄</h3>
+                        <div class="reset-warning">
+                            <div class="warning-icon">⚠️</div>
+                            <div class="warning-content">
+                                <p><strong>¡Atención!</strong></p>
+                                <p>Esto borrará todas tus estrellas y tu racha actual.</p>
+                                <p>¿Estás segura de que quieres empezar de nuevo?</p>
+                            </div>
+                        </div>
+                        
+                        <div class="current-stats">
+                            <div class="stat-item">
+                                <span class="stat-icon">⭐</span>
+                                <span class="stat-label">Estrellas:</span>
+                                <span class="stat-value" id="helpStarCount">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">🔥</span>
+                                <span class="stat-label">Racha máxima:</span>
+                                <span class="stat-value" id="helpMaxStreak">0</span>
+                            </div>
+                        </div>
+
+                        <div class="help-section-footer">
+                            <button class="modal-btn modal-btn-default" onclick="hideHelpModal()">
+                                Cancelar
+                            </button>
+                            <button class="modal-btn modal-btn-danger" onclick="confirmResetPoints()">
+                                🔄 Sí, reiniciar todo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
