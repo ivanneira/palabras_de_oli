@@ -135,12 +135,12 @@ const AppConfig = {
             easy: {
                 allowMultipleAttempts: true,
                 showProgressHints: true,
-                listenCount: 10            // Cantidad de pistas auditivas en modo fácil
+                listenCount: -1           // Pistas auditivas ilimitadas
             },
             hard: {
                 allowMultipleAttempts: true,
                 showProgressHints: false,
-                listenCount: 5            // Cantidad de pistas auditivas en modo difícil
+                listenCount: -1           // Pistas auditivas ilimitadas
             },
             free: {
                 enablePronunciation: true,

@@ -50,7 +50,8 @@ class PalabrasGame {
             shine: null,
             break: null,
             winStreak: null,
-            applause: null
+            applause: null,
+            tap: null
         };
         
         // Configuración de personalización
@@ -252,7 +253,7 @@ class PalabrasGame {
     }
 
     loadCriticalAudio() {
-        const criticalAudio = ['shine.mp3', 'break.mp3'];
+        const criticalAudio = ['shine.mp3', 'break.mp3', 'tap.mp3'];
         
         criticalAudio.forEach(filename => {
             this.loadSingleAudio(filename).then(audio => {
@@ -262,6 +263,8 @@ class PalabrasGame {
                     this.audioFiles.win = audio; // Mapeo para compatibilidad
                 } else if (key === 'break') {
                     this.audioFiles.lose = audio; // Mapeo para compatibilidad
+                } else if (key === 'tap') {
+                    // tap.mp3 cargado para feedback táctil
                 }
                 this.updateAudioVolumes();
             });
@@ -311,6 +314,7 @@ class PalabrasGame {
         if (this.audioFiles.lose) this.audioFiles.lose.volume = volumes.effects;
         if (this.audioFiles.shine) this.audioFiles.shine.volume = volumes.effects;
         if (this.audioFiles.break) this.audioFiles.break.volume = volumes.effects;
+        if (this.audioFiles.tap) this.audioFiles.tap.volume = volumes.effects;
         if (this.audioFiles.winStreak) this.audioFiles.winStreak.volume = volumes.effects;
         if (this.audioFiles.applause) this.audioFiles.applause.volume = volumes.applause;
     }
@@ -1594,31 +1598,16 @@ class PalabrasGame {
         const listenCountSpan = document.getElementById('listenCount');
         
         if (listenBtn && listenCountSpan) {
-            // Configuración de audio hints
-            const showCount = this.getConfigValue('game.audioHints.showRemainingCount', true);
-            const disableWhenExhausted = this.getConfigValue('game.audioHints.disableWhenExhausted', true);
-            
-            // Mostrar contador o texto según configuración
-            if (this.listenCount === -1) {
-                // Modo ilimitado (modo libre)
-                listenCountSpan.textContent = '∞';
-                listenBtn.disabled = false;
-            } else if (showCount) {
-                listenCountSpan.textContent = this.listenCount;
-                listenBtn.disabled = disableWhenExhausted && this.listenCount <= 0;
-            } else {
-                listenCountSpan.textContent = this.listenCount > 0 ? '🔊' : '🔇';
-                listenBtn.disabled = disableWhenExhausted && this.listenCount <= 0;
-            }
+            // El botón escuchar ahora es siempre ilimitado
+            listenCountSpan.textContent = '∞';
+            listenBtn.disabled = false;
         }
     }
 
     listenToWord() {
-        if (this.currentWord && (this.listenCount > 0 || this.listenCount === -1)) {
-            // Solo decrementar si no es ilimitado (-1)
-            if (this.listenCount > 0) {
-                this.listenCount--;
-            }
+        if (this.currentWord) {
+            // El botón escuchar ahora es siempre ilimitado
+            // No decrementamos listenCount nunca
             
             this.updateListenButton();
             this.speakWord(this.currentWord.palabra);
@@ -1712,15 +1701,19 @@ class PalabrasGame {
         this.updateSubmitButton();
     }
 
-    speakWord(text) {
+    speakWord(text, customVoice = null) {
         if (!this.speechSynthesis) return;
 
+        // Cancelar inmediatamente cualquier audio TTS anterior para evitar superposición
+        this.speechSynthesis.cancel();
+        
         // Throttling TTS para evitar múltiples llamadas rápidas
         if (this.ttsThrottle) {
             clearTimeout(this.ttsThrottle);
         }
         
         this.ttsThrottle = setTimeout(() => {
+            // Doble cancelación para máxima seguridad contra superposición
             this.speechSynthesis.cancel();
             
             // Configuración de voz desde config (cached)
@@ -1744,7 +1737,10 @@ class PalabrasGame {
             utterance.pitch = voiceConfig.pitch;
             utterance.volume = voiceConfig.volume * this.getConfigValue('audio.volumes.voice', 1.0);
             
-            if (this.spanishVoice) {
+            // Usar voz personalizada si se proporciona, o la voz española por defecto
+            if (customVoice) {
+                utterance.voice = customVoice;
+            } else if (this.spanishVoice) {
                 utterance.voice = this.spanishVoice;
             }
             
@@ -2205,10 +2201,18 @@ class PalabrasGame {
     }
 
     playTouchLetterSound() {
-        // Sonido sutil para feedback táctil (usando TTS como fallback)
-        if (this.audioFiles.shine) {
+        // Sonido específico para feedback táctil usando tap.mp3
+        if (this.audioFiles.tap) {
+            // Detener audio anterior para evitar superposición
+            this.audioFiles.tap.currentTime = 0;
+            this.audioFiles.tap.volume = 0.4; // Volumen moderado para feedback táctil
+            this.audioFiles.tap.play().catch(() => {
+                // Silenciar error, es solo feedback opcional
+            });
+        } else if (this.audioFiles.shine) {
+            // Fallback a shine si tap no está disponible
             const audio = this.audioFiles.shine.cloneNode();
-            audio.volume = 0.3; // Volumen bajo para no ser molesto
+            audio.volume = 0.3;
             audio.play().catch(() => {
                 // Silenciar error, es solo feedback opcional
             });
@@ -2216,10 +2220,18 @@ class PalabrasGame {
     }
 
     playTouchClearSound() {
-        // Sonido diferente para limpiar
-        if (this.audioFiles.break) {
+        // Sonido sutil para limpiar (usar tap con volumen bajo)
+        if (this.audioFiles.tap) {
+            // Detener audio anterior para evitar superposición
+            this.audioFiles.tap.currentTime = 0;
+            this.audioFiles.tap.volume = 0.2; // Volumen muy bajo para limpiar
+            this.audioFiles.tap.play().catch(() => {
+                // Silenciar error
+            });
+        } else if (this.audioFiles.break) {
+            // Fallback a break si tap no está disponible
             const audio = this.audioFiles.break.cloneNode();
-            audio.volume = 0.2; // Volumen muy bajo
+            audio.volume = 0.2;
             audio.play().catch(() => {
                 // Silenciar error
             });
