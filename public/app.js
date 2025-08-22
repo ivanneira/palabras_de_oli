@@ -20,7 +20,24 @@ class PalabrasGame {
         // Configuración centralizada
         this.config = window.AppConfig || {};
         this.loadConfig();
+        
+        // Optimización: LRU Cache para imágenes con límite
         this.preloadedImages = new Map();
+        this.maxCachedImages = 20; // Límite de imágenes en cache
+        
+        // Cache para consultas DOM frecuentes
+        this.domCache = new Map();
+        
+        // Control de TTS throttling
+        this.ttsThrottle = null;
+        this.ttsDelay = 100; // ms entre llamadas TTS
+        
+        // Memoización de configuración
+        this.configCache = new Map();
+        
+        // Event listeners cleanup tracking
+        this.eventListeners = [];
+        
         this.audioFiles = {
             win: null,
             lose: null,
@@ -45,6 +62,9 @@ class PalabrasGame {
         ];
         
         this.initializeGame();
+        
+        // Cleanup automático al cerrar/recargar página
+        window.addEventListener('beforeunload', () => this.cleanupAllListeners());
     }
 
     // Cargar configuración
@@ -70,25 +90,35 @@ class PalabrasGame {
         }
     }
 
-    // Obtener valor de configuración con fallback
+    // Obtener valor de configuración con memoización
     getConfigValue(path, defaultValue = null) {
+        // Cache hit - evita parsing repetitivo
+        if (this.configCache.has(path)) {
+            return this.configCache.get(path);
+        }
+        
+        let result;
         if (typeof window.getConfig === 'function') {
-            return window.getConfig(path, defaultValue);
-        }
-        
-        // Fallback manual si no está disponible la función
-        const keys = path.split('.');
-        let current = this.config;
-        
-        for (const key of keys) {
-            if (current && typeof current === 'object' && key in current) {
-                current = current[key];
-            } else {
-                return defaultValue;
+            result = window.getConfig(path, defaultValue);
+        } else {
+            // Fallback manual si no está disponible la función
+            const keys = path.split('.');
+            let current = this.config;
+            
+            for (const key of keys) {
+                if (current && typeof current === 'object' && key in current) {
+                    current = current[key];
+                } else {
+                    result = defaultValue;
+                    break;
+                }
             }
+            if (result === undefined) result = current;
         }
         
-        return current;
+        // Cache result para futuras consultas
+        this.configCache.set(path, result);
+        return result;
     }
 
 
@@ -107,15 +137,24 @@ class PalabrasGame {
         return this.randomMessages[randomIndex];
     }
 
-    // Función para precargar imagen
+    // Función para precargar imagen con LRU cache
     preloadImage(imageSrc) {
         if (this.preloadedImages.has(imageSrc)) {
+            // Mover al final para LRU
+            const img = this.preloadedImages.get(imageSrc);
+            this.preloadedImages.delete(imageSrc);
+            this.preloadedImages.set(imageSrc, img);
             return Promise.resolve();
         }
         
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
+                // Implementar LRU: eliminar la más antigua si excede límite
+                if (this.preloadedImages.size >= this.maxCachedImages) {
+                    const firstKey = this.preloadedImages.keys().next().value;
+                    this.preloadedImages.delete(firstKey);
+                }
                 this.preloadedImages.set(imageSrc, img);
                 resolve();
             };
@@ -176,31 +215,58 @@ class PalabrasGame {
         }
     }
 
+    // Lazy loading de audio files - solo cargar cuando se necesiten
     loadAudioFiles() {
-        const loadAudio = (filename) => {
-            return new Promise((resolve) => {
-                const audio = new Audio(`/sounds/${filename}`);
-                audio.addEventListener('canplaythrough', () => resolve(audio));
-                audio.addEventListener('error', () => resolve(null));
+        // Solo precargar audio crítico (shine y break para feedback inmediato)
+        this.loadCriticalAudio();
+    }
+
+    loadCriticalAudio() {
+        const criticalAudio = ['shine.mp3', 'break.mp3'];
+        
+        criticalAudio.forEach(filename => {
+            this.loadSingleAudio(filename).then(audio => {
+                const key = filename.split('.')[0];
+                this.audioFiles[key] = audio;
+                if (key === 'shine') {
+                    this.audioFiles.win = audio; // Mapeo para compatibilidad
+                } else if (key === 'break') {
+                    this.audioFiles.lose = audio; // Mapeo para compatibilidad
+                }
+                this.updateAudioVolumes();
             });
+        });
+    }
+
+    // Cargar audio individual con lazy loading
+    loadSingleAudio(filename) {
+        return new Promise((resolve) => {
+            const audio = new Audio(`/sounds/${filename}`);
+            audio.addEventListener('canplaythrough', () => resolve(audio));
+            audio.addEventListener('error', () => resolve(null));
+            // Optimización: preload metadata solamente
+            audio.preload = 'metadata';
+        });
+    }
+
+    // Lazy loading de audio no crítico cuando se necesite
+    ensureAudioLoaded(audioKey) {
+        if (this.audioFiles[audioKey]) {
+            return Promise.resolve(this.audioFiles[audioKey]);
+        }
+
+        const audioMap = {
+            winStreak: 'win.mp3',
+            applause: 'applause.mp3'
         };
 
-        Promise.all([
-            loadAudio('shine.mp3'),
-            loadAudio('break.mp3'),
-            loadAudio('win.mp3'),
-            loadAudio('applause.mp3')
-        ]).then(([shineAudio, breakAudio, winStreakAudio, applauseAudio]) => {
-            // Mapear correctamente los sonidos
-            this.audioFiles.win = shineAudio;      // shine.mp3 para respuestas correctas
-            this.audioFiles.lose = breakAudio;     // break.mp3 para respuestas incorrectas
-            this.audioFiles.shine = shineAudio;    // shine.mp3 original
-            this.audioFiles.break = breakAudio;    // break.mp3 original
-            this.audioFiles.winStreak = winStreakAudio; // win.mp3 para rachas
-            this.audioFiles.applause = applauseAudio;   // applause.mp3 para celebraciones
-            
-            // Configurar volúmenes iniciales
+        const filename = audioMap[audioKey];
+        if (!filename) return Promise.resolve(null);
+
+        return this.loadSingleAudio(filename).then(audio => {
+            this.audioFiles[audioKey] = audio;
             this.updateAudioVolumes();
+            return audio;
         });
     }
 
@@ -220,21 +286,37 @@ class PalabrasGame {
     }
 
     setupEventListeners() {
-        const wordInput = document.getElementById('wordInput');
-        const freeInput = document.getElementById('freeInput');
+        const wordInput = this.getDOMElement('wordInput');
+        const freeInput = this.getDOMElement('freeInput');
 
         if (wordInput) {
-            wordInput.addEventListener('keydown', (e) => this.handleKeyInput(e));
-            wordInput.addEventListener('input', (e) => this.handleInputChange(e));
+            const keydownHandler = (e) => this.handleKeyInput(e);
+            const inputHandler = (e) => this.handleInputChange(e);
+            
+            wordInput.addEventListener('keydown', keydownHandler);
+            wordInput.addEventListener('input', inputHandler);
+            
+            // Track listeners for cleanup
+            this.eventListeners.push(
+                { element: wordInput, event: 'keydown', handler: keydownHandler },
+                { element: wordInput, event: 'input', handler: inputHandler }
+            );
         }
 
         if (freeInput) {
-            freeInput.addEventListener('keydown', (e) => {
+            const freeKeyHandler = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     this.speakFreeInput();
                 }
-            });
+            };
+            
+            freeInput.addEventListener('keydown', freeKeyHandler);
+            
+            // Track listener for cleanup
+            this.eventListeners.push(
+                { element: freeInput, event: 'keydown', handler: freeKeyHandler }
+            );
         }
     }
 
@@ -441,21 +523,36 @@ class PalabrasGame {
     }
 
     createFloatingStars() {
-        const wordInput = document.getElementById('wordInput');
+        const wordInput = this.getDOMElement('wordInput');
         if (!wordInput) return;
+
+        // Límite de nodos DOM para evitar acumulación excesiva
+        const existingStars = document.querySelectorAll('.floating-star');
+        if (existingStars.length > 20) {
+            // Limpiar estrellas más antiguas si hay demasiadas
+            existingStars.forEach((star, index) => {
+                if (index < existingStars.length - 15) {
+                    star.remove();
+                }
+            });
+        }
 
         const rect = wordInput.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
 
-        // Crear 8 estrellitas flotantes
-        for (let i = 0; i < 8; i++) {
+        // Reducir número de estrellas en móviles para mejor rendimiento
+        const isMobile = window.innerWidth < 768;
+        const starCount = isMobile ? 4 : 6; // Reducido de 8 
+
+        // Crear estrellitas flotantes optimizadas
+        for (let i = 0; i < starCount; i++) {
             const star = document.createElement('div');
             star.textContent = '⭐';
             star.className = 'floating-star';
             
             // Posición aleatoria alrededor del input
-            const angle = (i / 8) * 2 * Math.PI;
+            const angle = (i / starCount) * 2 * Math.PI;
             const radius = 50 + Math.random() * 30;
             const x = centerX + Math.cos(angle) * radius;
             const y = centerY + Math.sin(angle) * radius;
@@ -464,12 +561,15 @@ class PalabrasGame {
             star.style.top = y + 'px';
             star.style.animationDelay = (Math.random() * 0.5) + 's';
             
-            document.body.appendChild(star);
+            // Usar requestAnimationFrame para mejor rendimiento
+            requestAnimationFrame(() => {
+                document.body.appendChild(star);
+            });
             
-            // Eliminar después de la animación
+            // Eliminar después de la animación con cleanup automático
             setTimeout(() => {
                 if (star.parentNode) {
-                    star.parentNode.removeChild(star);
+                    star.remove(); // Método más moderno que removeChild
                 }
             }, 2500);
         }
@@ -639,16 +739,20 @@ class PalabrasGame {
         // Configurar input para que el texto empiece alineado con las pistas
         this.setupInputAlignment(wordInput, palabra);
         
-        // Limpiar listeners anteriores si existen
-        if (wordInput._alignmentHandler) {
-            wordInput.removeEventListener('input', wordInput._alignmentHandler);
-        }
+        // Limpiar listeners anteriores usando tracking system
+        this.cleanupWordInputListeners();
         
         // Agregar nuevo listener para reajustar mientras se escribe
-        wordInput._alignmentHandler = () => {
-            this.adjustInputAlignment();
-        };
-        wordInput.addEventListener('input', wordInput._alignmentHandler);
+        const alignmentHandler = () => this.adjustInputAlignment();
+        wordInput.addEventListener('input', alignmentHandler);
+        
+        // Track listener para cleanup posterior
+        this.eventListeners.push({
+            element: wordInput,
+            event: 'input',
+            handler: alignmentHandler,
+            temp: true // Marcador para listeners temporales
+        });
 
         wordInput.focus();
     }
@@ -929,21 +1033,25 @@ class PalabrasGame {
     }
 
     playWinStreakSound() {
-        if (this.audioFiles.winStreak) {
-            this.audioFiles.winStreak.currentTime = 0;
-            this.audioFiles.winStreak.play().catch(() => {
-                console.log('Error playing win streak sound');
-            });
-        }
+        this.ensureAudioLoaded('winStreak').then(audio => {
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(() => {
+                    console.log('Error playing win streak sound');
+                });
+            }
+        });
     }
 
     playApplauseSound() {
-        if (this.audioFiles.applause) {
-            this.audioFiles.applause.currentTime = 0;
-            this.audioFiles.applause.play().catch(() => {
-                console.log('Error playing applause sound');
-            });
-        }
+        this.ensureAudioLoaded('applause').then(audio => {
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(() => {
+                    console.log('Error playing applause sound');
+                });
+            }
+        });
     }
 
     showFeedback(isCorrect, message) {
@@ -965,34 +1073,42 @@ class PalabrasGame {
     speakWord(text) {
         if (!this.speechSynthesis) return;
 
-        this.speechSynthesis.cancel();
-        
-        // Configuración de voz desde config
-        const voiceConfig = this.getConfigValue('voice', {
-            language: 'es-ES',
-            rate: 0.4,
-            pitch: 2.0,
-            volume: 1.0,
-            addExclamations: true
-        });
-        
-        // Añadir exclamaciones si está habilitado
-        let expressiveText = text;
-        if (voiceConfig.addExclamations && !text.includes('¡') && !text.includes('!')) {
-            expressiveText = `¡${text}!`;
+        // Throttling TTS para evitar múltiples llamadas rápidas
+        if (this.ttsThrottle) {
+            clearTimeout(this.ttsThrottle);
         }
         
-        const utterance = new SpeechSynthesisUtterance(expressiveText);
-        utterance.lang = voiceConfig.language;
-        utterance.rate = voiceConfig.rate;
-        utterance.pitch = voiceConfig.pitch;
-        utterance.volume = voiceConfig.volume * this.getConfigValue('audio.volumes.voice', 1.0);
-        
-        if (this.spanishVoice) {
-            utterance.voice = this.spanishVoice;
-        }
-        
-        this.speechSynthesis.speak(utterance);
+        this.ttsThrottle = setTimeout(() => {
+            this.speechSynthesis.cancel();
+            
+            // Configuración de voz desde config (cached)
+            const voiceConfig = this.getConfigValue('voice', {
+                language: 'es-ES',
+                rate: 0.4,
+                pitch: 2.0,
+                volume: 1.0,
+                addExclamations: true
+            });
+            
+            // Añadir exclamaciones si está habilitado
+            let expressiveText = text;
+            if (voiceConfig.addExclamations && !text.includes('¡') && !text.includes('!')) {
+                expressiveText = `¡${text}!`;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(expressiveText);
+            utterance.lang = voiceConfig.language;
+            utterance.rate = voiceConfig.rate;
+            utterance.pitch = voiceConfig.pitch;
+            utterance.volume = voiceConfig.volume * this.getConfigValue('audio.volumes.voice', 1.0);
+            
+            if (this.spanishVoice) {
+                utterance.voice = this.spanishVoice;
+            }
+            
+            this.speechSynthesis.speak(utterance);
+            this.ttsThrottle = null;
+        }, this.ttsDelay);
     }
 
     speakCurrentWord() {
@@ -1146,10 +1262,43 @@ class PalabrasGame {
         }
     }
 
+    // Método para obtener elementos DOM con cache
+    getDOMElement(id) {
+        if (this.domCache.has(id)) {
+            return this.domCache.get(id);
+        }
+        const element = document.getElementById(id);
+        if (element) {
+            this.domCache.set(id, element);
+        }
+        return element;
+    }
+
+    // Cleanup de listeners temporales de word input
+    cleanupWordInputListeners() {
+        this.eventListeners = this.eventListeners.filter(listener => {
+            if (listener.temp && listener.element.id === 'wordInput') {
+                listener.element.removeEventListener(listener.event, listener.handler);
+                return false; // Remover del array
+            }
+            return true; // Mantener en el array
+        });
+    }
+
+    // Cleanup general de todos los event listeners
+    cleanupAllListeners() {
+        this.eventListeners.forEach(listener => {
+            if (listener.element && listener.element.removeEventListener) {
+                listener.element.removeEventListener(listener.event, listener.handler);
+            }
+        });
+        this.eventListeners = [];
+    }
+
     showScreen(screenId) {
         const screens = ['startScreen', 'gameScreen', 'freePlayScreen', 'resultsScreen'];
         screens.forEach(screen => {
-            const element = document.getElementById(screen);
+            const element = this.getDOMElement(screen); // Usar cache DOM
             if (element) {
                 if (screen === screenId) {
                     element.classList.remove('hidden');

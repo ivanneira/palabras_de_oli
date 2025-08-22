@@ -905,10 +905,39 @@ body::before {
     box-shadow: var(--shadow-xl);
 }
 
-/* ===== ANIMACIONES ===== */
+/* ===== ANIMACIONES OPTIMIZADAS ===== */
+/* Usar transform y opacity para mejor rendimiento */
 @keyframes rainbow-gradient {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
+}
+
+/* Animación optimizada para floating stars */
+.floating-star {
+    position: absolute;
+    font-size: 1.5rem;
+    pointer-events: none;
+    z-index: 1000;
+    /* Usar will-change para indicar al navegador que se va a animar */
+    will-change: transform, opacity;
+    /* Forzar compositing layer para mejor rendimiento */
+    transform: translateZ(0);
+    animation: float-and-fade 2.5s ease-out forwards;
+}
+
+@keyframes float-and-fade {
+    0% {
+        transform: translateY(0) scale(0.5) translateZ(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-60px) scale(1) translateZ(0);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-120px) scale(0.8) translateZ(0);
+        opacity: 0;
+    }
 }
 
 @keyframes rainbow-background {
@@ -1149,6 +1178,68 @@ body::before {
     }
 }
 
+/* ===== ANIMACIONES DE ERROR OPTIMIZADAS ===== */
+.input-error-shake {
+    animation: error-shake 0.6s ease-out;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.input-error-border {
+    border-color: var(--color-error) !important;
+    transition: border-color 0.3s ease-out;
+}
+
+.word-correct {
+    animation: success-glow 0.8s ease-out;
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+}
+
+@keyframes error-shake {
+    0%, 100% { transform: translateX(0) translateZ(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+    20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+@keyframes success-glow {
+    0% { 
+        border-color: var(--color-success);
+        box-shadow: 0 0 0 0 rgba(152, 251, 152, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(152, 251, 152, 0.1);
+    }
+    100% {
+        border-color: rgba(147, 112, 219, 0.2);
+        box-shadow: 0 0 0 0 rgba(152, 251, 152, 0);
+    }
+}
+
+/* ===== OPTIMIZACIONES DE RENDIMIENTO ===== */
+/* Reducir repainting en elementos que se animan frecuentemente */
+.star-animate,
+.pulse-gentle,
+.bounce-subtle {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Optimizar transiciones de opacidad */
+.question-fade-out,
+.question-fade-in {
+    will-change: opacity;
+    transition: opacity 0.3s ease-out;
+}
+
+.question-fade-out {
+    opacity: 0;
+}
+
+.question-fade-in {
+    opacity: 1;
+}
+
 /* Accesibilidad */
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -1157,6 +1248,14 @@ body::before {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+    
+    /* Mantener will-change para performance aún con animaciones reducidas */
+    .floating-star,
+    .star-animate,
+    .pulse-gentle,
+    .bounce-subtle {
+        will-change: auto;
     }
 }
 
