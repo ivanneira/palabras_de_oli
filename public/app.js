@@ -705,9 +705,7 @@ class PalabrasGame {
             if (this.currentWord.imagen.startsWith('color:')) {
                 const color = this.currentWord.imagen.replace('color:', '');
                 questionImage.innerHTML = `
-                    <div class="color-display" style="background-color: ${color};">
-                        ${this.currentWord.palabra.toUpperCase()}
-                    </div>
+                    <div class="color-display" style="background-color: ${color};"></div>
                 `;
             } else {
                 questionImage.innerHTML = `
@@ -755,6 +753,9 @@ class PalabrasGame {
         });
 
         wordInput.focus();
+        
+        // Inicializar estado del botón de envío
+        this.updateSubmitButton();
     }
 
     setupInputAlignment(input, palabra) {
@@ -802,16 +803,40 @@ class PalabrasGame {
     handleInputChange(event) {
         const input = event.target;
         input.value = input.value.toLowerCase().replace(/[^a-záéíóúñü]/g, '');
+        
+        // Actualizar estado del botón de envío
+        this.updateSubmitButton();
+    }
+    
+    updateSubmitButton() {
+        const submitBtn = document.getElementById('submitBtn');
+        const wordInput = document.getElementById('wordInput');
+        
+        if (!submitBtn || !wordInput || !this.currentWord) return;
+        
+        const currentLength = wordInput.value.length;
+        const targetLength = this.currentWord.palabra.length;
+        
+        if (currentLength === targetLength && currentLength > 0) {
+            submitBtn.classList.remove('disabled');
+        } else {
+            submitBtn.classList.add('disabled');
+        }
     }
 
     validateAnswer() {
         const wordInput = document.getElementById('wordInput');
+        const submitBtn = document.getElementById('submitBtn');
         if (!wordInput || !this.currentWord) return;
 
         const userAnswer = this.normalizeText(wordInput.value);
         const correctAnswer = this.normalizeText(this.currentWord.palabra);
 
         wordInput.disabled = true;
+        // Deshabilitar el botón de envío durante la validación
+        if (submitBtn) {
+            submitBtn.classList.add('disabled');
+        }
 
         if (userAnswer === correctAnswer) {
             this.handleCorrectAnswer();
@@ -876,6 +901,8 @@ class PalabrasGame {
                 wordInput.value = '';
                 wordInput.focus();
             }
+            // Rehabilitar y actualizar el botón de envío
+            this.updateSubmitButton();
             this.clearFeedback();
         }, 2000);
     }
@@ -1068,6 +1095,15 @@ class PalabrasGame {
             feedbackMessage.textContent = '';
             feedbackMessage.className = 'feedback-message';
         }
+        
+        const wordInput = document.getElementById('wordInput');
+        if (wordInput) {
+            wordInput.value = '';
+            wordInput.disabled = false;
+        }
+        
+        // Actualizar estado del botón después de limpiar
+        this.updateSubmitButton();
     }
 
     speakWord(text) {
@@ -1138,11 +1174,12 @@ class PalabrasGame {
     }
 
     updateProgress() {
-        const remainingElement = document.getElementById('remainingWords');
+        // Actualizar progreso en el header
+        const remainingElementHeader = document.getElementById('remainingWordsHeader');
         
-        if (remainingElement) {
+        if (remainingElementHeader) {
             const remaining = this.currentWords.length - this.currentQuestion;
-            remainingElement.textContent = remaining > 0 ? `Quedan ${remaining} palabras` : 'Última palabra';
+            remainingElementHeader.textContent = remaining > 0 ? `Quedan ${remaining} palabras` : 'Última palabra';
         }
     }
 
@@ -1312,6 +1349,24 @@ class PalabrasGame {
                 }
             }
         });
+        
+        // Mostrar/ocultar elementos del header según la pantalla
+        this.updateHeaderVisibility(screenId);
+    }
+    
+    updateHeaderVisibility(screenId) {
+        const backBtn = document.getElementById('backBtnHeader');
+        const progress = document.getElementById('progressHeader');
+        
+        if (screenId === 'gameScreen') {
+            // Mostrar botón atrás y progreso en el juego
+            if (backBtn) backBtn.classList.remove('hidden');
+            if (progress) progress.classList.remove('hidden');
+        } else {
+            // Ocultar en otras pantallas
+            if (backBtn) backBtn.classList.add('hidden');
+            if (progress) progress.classList.add('hidden');
+        }
     }
 
     goBack() {
@@ -1343,6 +1398,16 @@ function nextQuestion() {
 function goBack() {
     if (game) {
         game.goBack();
+    }
+}
+
+function submitAnswer() {
+    if (game) {
+        const submitBtn = document.getElementById('submitBtn');
+        // Solo permitir envío si el botón no está deshabilitado
+        if (submitBtn && !submitBtn.classList.contains('disabled')) {
+            game.validateAnswer();
+        }
     }
 }
 

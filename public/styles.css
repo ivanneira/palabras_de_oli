@@ -125,8 +125,9 @@ body::before {
 
 /* ===== HEADER ===== */
 .header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: var(--space-lg);
     align-items: center;
     background: var(--color-surface);
     padding: var(--space-xl);
@@ -135,6 +136,24 @@ body::before {
     border: 1px solid rgba(147, 112, 219, 0.1);
     position: relative;
     overflow: hidden;
+    min-height: 80px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    justify-self: start;
+}
+
+.header-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.header-right {
+    justify-self: end;
 }
 
 .header::before {
@@ -359,6 +378,38 @@ body::before {
     box-shadow: var(--shadow-sm);
 }
 
+/* Botón de atrás en el header - diseño infantil */
+.back-btn-header {
+    background: var(--color-primary);
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+    color: var(--color-text-on-primary);
+}
+
+.back-btn-header:hover {
+    background: var(--color-primary-dark);
+    transform: translateX(-2px) scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.back-btn-header:active {
+    transform: translateX(-1px) scale(0.98);
+}
+
+.back-icon {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    line-height: 1;
+}
+
 .progress {
     font-family: var(--font-display);
     font-size: var(--text-lg);
@@ -423,6 +474,12 @@ body::before {
     position: relative;
 }
 
+/* Borde especial para color blanco */
+.color-display[style*="background-color: #FFFFFF"], 
+.color-display[style*="background-color: #ffffff"] {
+    border: 4px solid #CCCCCC;
+}
+
 .color-display::after {
     content: '';
     position: absolute;
@@ -439,12 +496,19 @@ body::before {
 /* ===== INPUT Y CONTROLES ===== */
 .input-container {
     margin-bottom: var(--space-xl);
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-lg);
+    justify-content: center;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .word-input-wrapper {
     position: relative;
+    flex: 1;
     max-width: 400px;
-    margin: 0 auto;
 }
 
 .word-input {
@@ -486,6 +550,55 @@ body::before {
     color: var(--color-text-light);
     pointer-events: none;
     transition: var(--transition-normal);
+}
+
+/* Botón de envío - diseño infantil con touch targets adecuados */
+.submit-btn {
+    background: var(--color-success);
+    border: 2px solid var(--color-success);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg) var(--space-xl);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    box-shadow: var(--shadow-sm);
+    min-width: 120px;
+    min-height: 44px; /* Touch target mínimo para niños */
+    white-space: nowrap;
+}
+
+.submit-btn:hover:not(.disabled) {
+    background: #7FE87F;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.submit-btn:active:not(.disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.submit-btn.disabled {
+    background: var(--color-accent);
+    border-color: rgba(147, 112, 219, 0.2);
+    color: var(--color-text-light);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.submit-icon {
+    font-size: var(--text-xl);
+    font-weight: 600;
+}
+
+.submit-text {
+    font-weight: 600;
 }
 
 .feedback-container {
@@ -1034,10 +1147,26 @@ body::before {
     }
     
     .header {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: var(--space-lg);
         text-align: center;
         padding: var(--space-lg);
+    }
+    
+    .header-left, .header-center, .header-right {
+        justify-self: center;
+    }
+    
+    .header-left {
+        order: 2;
+    }
+    
+    .header-center {
+        order: 1;
+    }
+    
+    .header-right {
+        order: 3;
     }
     
     .stats-container {
@@ -1082,6 +1211,15 @@ body::before {
         height: 150px;
     }
     
+    .input-container {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    
+    .word-input-wrapper {
+        max-width: 100%;
+    }
+    
     .word-input {
         font-size: var(--text-xl);
         padding: var(--space-md) var(--space-lg);
@@ -1089,6 +1227,11 @@ body::before {
     
     .hint-text {
         font-size: var(--text-xl);
+    }
+    
+    .submit-btn {
+        align-self: center;
+        min-width: 140px;
     }
     
     .game-controls {

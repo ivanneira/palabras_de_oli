@@ -20,18 +20,30 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="title">¡Aprende con Olivia! 🌟</h1>
-            <div class="stats-container">
-                <div class="star-counter">
-                    <span class="star" id="starIcon">⭐</span>
-                    <span class="counter" id="starCounter">0</span>
+            <div class="header-left">
+                <button class="back-btn-header hidden" id="backBtnHeader" onclick="goBack()" title="Volver al menú">
+                    <span class="back-icon">←</span>
+                </button>
+                <h1 class="title">¡Aprende con Olivia! 🌟</h1>
+            </div>
+            <div class="header-center">
+                <div class="progress hidden" id="progressHeader">
+                    <span id="remainingWordsHeader">Quedan 10 palabras</span>
                 </div>
-                <div class="streak-counter">
-                    <span class="streak-icon">🔥</span>
-                    <span class="streak-text">Racha:</span>
-                    <span class="streak-number" id="streakCounter">0</span>
+            </div>
+            <div class="header-right">
+                <div class="stats-container">
+                    <div class="star-counter">
+                        <span class="star" id="starIcon">⭐</span>
+                        <span class="counter" id="starCounter">0</span>
+                    </div>
+                    <div class="streak-counter">
+                        <span class="streak-icon">🔥</span>
+                        <span class="streak-text">Racha:</span>
+                        <span class="streak-number" id="streakCounter">0</span>
+                    </div>
+                    <button class="reset-btn" onclick="resetPoints()" title="Reiniciar puntos">🔄</button>
                 </div>
-                <button class="reset-btn" onclick="resetPoints()" title="Reiniciar puntos">🔄</button>
             </div>
         </header>
 
@@ -54,13 +66,6 @@
             </div>
 
             <div id="gameScreen" class="game-screen hidden">
-                <div class="game-header">
-                    <button class="back-btn" onclick="goBack()">← Volver</button>
-                    <div class="progress">
-                        <span id="remainingWords">Quedan 10 palabras</span>
-                    </div>
-                </div>
-                
                 <div class="question-container">
                     <div id="questionText" class="question-text"></div>
                     <div id="questionImage" class="question-image"></div>
@@ -71,6 +76,10 @@
                         <input type="text" id="wordInput" class="word-input" maxlength="10" autocomplete="off" spellcheck="false">
                         <div id="hintText" class="hint-text"></div>
                     </div>
+                    <button class="submit-btn disabled" id="submitBtn" onclick="submitAnswer()" title="Enviar respuesta">
+                        <span class="submit-icon">✓</span>
+                        <span class="submit-text">¡Listo!</span>
+                    </button>
                 </div>
 
                 <div id="feedbackContainer" class="feedback-container">
