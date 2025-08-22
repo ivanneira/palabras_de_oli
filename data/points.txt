@@ -1,5 +1,0 @@
-{
-  "totalStars": 0,
-  "currentStreak": 0,
-  "maxStreak": 0
-}

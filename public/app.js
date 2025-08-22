@@ -126,6 +126,9 @@ class PalabrasGame {
 
     async initializeGame() {
         try {
+            // Verificar compatibilidad de almacenamiento
+            this.storageCompatibility = this.checkStorageCompatibility();
+            
             await this.loadWords();
             await this.loadPointsFromAPI();
             this.updateDisplays();
@@ -247,11 +250,20 @@ class PalabrasGame {
     }
 
     async loadPointsFromAPI() {
-        // En Vercel, usar directamente localStorage sin API
+        // Sistema híbrido: localStorage principal + cookies como respaldo
         try {
-            const savedData = localStorage.getItem('olivia-points');
-            if (savedData) {
-                const data = JSON.parse(savedData);
+            let data = null;
+            
+            // Intentar cargar desde localStorage primero
+            const localData = localStorage.getItem('olivia-points');
+            if (localData) {
+                data = JSON.parse(localData);
+            } else {
+                // Fallback a cookies si localStorage no está disponible
+                data = this.loadFromCookies();
+            }
+            
+            if (data) {
                 this.totalStars = data.totalStars || 0;
                 this.contadorRacha = data.currentStreak || 0;
                 this.maxRacha = data.maxStreak || 0;
@@ -262,7 +274,7 @@ class PalabrasGame {
                 this.maxRacha = 0;
             }
         } catch (error) {
-            console.error('Error loading points from localStorage:', error);
+            console.error('Error loading points:', error);
             // Valores por defecto en caso de error
             this.totalStars = 0;
             this.contadorRacha = 0;
@@ -278,11 +290,91 @@ class PalabrasGame {
         };
 
         try {
-            // En Vercel, guardar directamente en localStorage
+            // Guardar en localStorage como principal
             localStorage.setItem('olivia-points', JSON.stringify(pointsData));
+            
+            // Guardar también en cookies como respaldo
+            this.saveToCookies(pointsData);
         } catch (error) {
-            console.error('Error saving points to localStorage:', error);
+            console.error('Error saving points:', error);
+            // Si localStorage falla, intentar solo cookies
+            try {
+                this.saveToCookies(pointsData);
+            } catch (cookieError) {
+                console.error('Error saving to cookies:', cookieError);
+            }
         }
+    }
+
+    // Métodos para manejo de cookies como respaldo
+    saveToCookies(data) {
+        try {
+            const cookieValue = JSON.stringify(data);
+            // Expira en 1 año
+            const expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = `olivia-points=${encodeURIComponent(cookieValue)}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`;
+        } catch (error) {
+            console.error('Error saving to cookies:', error);
+        }
+    }
+
+    loadFromCookies() {
+        try {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'olivia-points') {
+                    return JSON.parse(decodeURIComponent(value));
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error loading from cookies:', error);
+            return null;
+        }
+    }
+
+    // Método para verificar compatibilidad de almacenamiento
+    checkStorageCompatibility() {
+        const compatibility = {
+            localStorage: false,
+            cookies: false,
+            details: []
+        };
+
+        // Verificar localStorage
+        try {
+            const test = 'test-storage';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            compatibility.localStorage = true;
+            compatibility.details.push('✅ localStorage disponible');
+        } catch (error) {
+            compatibility.details.push('❌ localStorage no disponible: ' + error.message);
+        }
+
+        // Verificar cookies
+        try {
+            document.cookie = 'test-cookie=test; path=/';
+            if (document.cookie.indexOf('test-cookie=test') !== -1) {
+                compatibility.cookies = true;
+                compatibility.details.push('✅ Cookies disponibles');
+                // Limpiar cookie de prueba
+                document.cookie = 'test-cookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            } else {
+                compatibility.details.push('❌ Cookies bloqueadas');
+            }
+        } catch (error) {
+            compatibility.details.push('❌ Cookies no disponibles: ' + error.message);
+        }
+
+        // Mostrar información en consola solo en modo debug
+        if (this.getConfigValue('development.debugMode', false)) {
+            console.log('🔧 Compatibilidad de almacenamiento:', compatibility);
+        }
+
+        return compatibility;
     }
 
     updateDisplays() {
@@ -414,11 +506,10 @@ class PalabrasGame {
             }
 
             this.gameMode = difficulty;
-            const response = await fetch(`/api/words/${difficulty}`);
-            const data = await response.json();
             
-            // Filtrar palabras que no han sido usadas
-            const availableWords = data.words.filter(word => !this.usedWords[difficulty].has(word.palabra));
+            // Filtrar palabras por dificultad y que no han sido usadas
+            const wordsForDifficulty = this.words.filter(word => word.dificultad === difficulty);
+            const availableWords = wordsForDifficulty.filter(word => !this.usedWords[difficulty].has(word.palabra));
             
             // Si no quedan palabras, mostrar pantalla de completado
             if (availableWords.length === 0) {

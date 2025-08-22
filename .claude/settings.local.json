@@ -3,7 +3,9 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(npm install)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "WebSearch",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

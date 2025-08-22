@@ -1,6 +1,45 @@
 {
-  "buildCommand": "echo 'No build needed'",
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "outputDirectory": "public",
-  "installCommand": "echo 'No install needed'",
-  "devCommand": "echo 'No dev command needed'"
+  "buildCommand": null,
+  "installCommand": null,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/sounds/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/images/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
 }
