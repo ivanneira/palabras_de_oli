@@ -47,18 +47,22 @@ class PalabrasGame {
             applause: null
         };
         
-        // 10 mensajes personalizados random para Olivia
+        // Configuración de personalización
+        this.childName = 'Olivia';
+        this.selectedVoice = null;
+        
+        // 10 mensajes personalizados random que usarán el nombre dinámico
         this.randomMessages = [
-            '¡Olivia es genial! 🌟',
+            '¡{name} es genial! 🌟',
             '¡Qué lista eres! 🎯',
             '¡Sigue así campeona! 💪',
-            '¡Eres increíble, Olivia! ✨',
+            '¡Eres increíble, {name}! ✨',
             '¡Muy bien, pequeña genio! 🧠',
             '¡Fantástico trabajo! 🎉',
-            '¡Olivia, eres la mejor! 👑',
+            '¡{name}, eres la mejor! 👑',
             '¡Súper bien hecho! 🚀',
             '¡Qué inteligente eres! 💡',
-            '¡Excelente, Olivia! 🌈'
+            '¡Excelente, {name}! 🌈'
         ];
         
         this.initializeGame();
@@ -131,10 +135,11 @@ class PalabrasGame {
             .trim();
     }
 
-    // Función para obtener mensaje random
+    // Función para obtener mensaje random personalizado
     getRandomMessage() {
         const randomIndex = Math.floor(Math.random() * this.randomMessages.length);
-        return this.randomMessages[randomIndex];
+        const message = this.randomMessages[randomIndex];
+        return this.personalizeMessage(message);
     }
 
     // Función para precargar imagen con LRU cache
@@ -170,10 +175,17 @@ class PalabrasGame {
             
             await this.loadWords();
             await this.loadPointsFromAPI();
+            
+            // Cargar configuración de personalización
+            await this.loadPersonalizationSettings();
+            
             this.updateDisplays();
             this.setupVoices();
             this.setupEventListeners();
             this.loadAudioFiles();
+            
+            // Mostrar modal de configuración si es la primera vez
+            this.checkFirstTimeSetup();
         } catch (error) {
             console.error('Error initializing game:', error);
             alert('Error al cargar el juego. Por favor, recarga la página.');
@@ -187,16 +199,23 @@ class PalabrasGame {
                 'es-ES-Female', 'Spanish (Spain)', 'Microsoft Helena', 'Google español'
             ]);
             
-            // Buscar voz preferida
+            // Primero: usar voz seleccionada por el usuario si existe
             let selectedVoice = null;
-            for (const preferred of preferredVoices) {
-                selectedVoice = voices.find(voice => 
-                    voice.name.toLowerCase().includes(preferred.toLowerCase())
-                );
-                if (selectedVoice) break;
+            if (this.selectedVoice) {
+                selectedVoice = voices.find(voice => voice.name === this.selectedVoice);
             }
             
-            // Fallback a cualquier voz en español
+            // Segundo: buscar voz preferida por configuración
+            if (!selectedVoice) {
+                for (const preferred of preferredVoices) {
+                    selectedVoice = voices.find(voice => 
+                        voice.name.toLowerCase().includes(preferred.toLowerCase())
+                    );
+                    if (selectedVoice) break;
+                }
+            }
+            
+            // Tercero: fallback a cualquier voz en español
             if (!selectedVoice) {
                 selectedVoice = voices.find(voice => 
                     voice.lang.includes('es') || 
@@ -206,6 +225,11 @@ class PalabrasGame {
             }
             
             this.spanishVoice = selectedVoice || voices[0];
+            
+            // Debug: mostrar voz seleccionada
+            if (this.spanishVoice) {
+                console.log('Voz TTS seleccionada:', this.spanishVoice.name, 'Lang:', this.spanishVoice.lang);
+            }
         };
 
         if (this.speechSynthesis.getVoices().length === 0) {
@@ -414,6 +438,217 @@ class PalabrasGame {
         } catch (error) {
             console.error('Error loading from cookies:', error);
             return null;
+        }
+    }
+
+    // ===== FUNCIONES DE PERSONALIZACIÓN =====
+    async loadPersonalizationSettings() {
+        try {
+            // Intentar cargar desde localStorage primero
+            const localData = localStorage.getItem('olivia-personalization');
+            let settings = null;
+            
+            if (localData) {
+                settings = JSON.parse(localData);
+            } else {
+                // Fallback a cookies
+                settings = this.loadPersonalizationFromCookies();
+            }
+            
+            if (settings) {
+                this.childName = settings.childName || 'Olivia';
+                this.selectedVoice = settings.selectedVoice || null;
+                // Actualizar títulos con el nombre cargado
+                setTimeout(() => this.updateDynamicTitles(), 100);
+            }
+        } catch (error) {
+            console.error('Error loading personalization:', error);
+            // Usar valores por defecto
+            this.childName = 'Olivia';
+            this.selectedVoice = null;
+        }
+    }
+
+    savePersonalizationSettings() {
+        const settings = {
+            childName: this.childName,
+            selectedVoice: this.selectedVoice
+        };
+        
+        try {
+            // Guardar en localStorage
+            localStorage.setItem('olivia-personalization', JSON.stringify(settings));
+            
+            // Guardar también en cookies como respaldo
+            this.savePersonalizationToCookies(settings);
+        } catch (error) {
+            console.error('Error saving personalization:', error);
+            // Si localStorage falla, intentar solo cookies
+            try {
+                this.savePersonalizationToCookies(settings);
+            } catch (cookieError) {
+                console.error('Error saving personalization to cookies:', cookieError);
+            }
+        }
+    }
+
+    savePersonalizationToCookies(settings) {
+        try {
+            const cookieValue = JSON.stringify(settings);
+            const expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = `olivia-personalization=${encodeURIComponent(cookieValue)}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`;
+        } catch (error) {
+            console.error('Error saving personalization to cookies:', error);
+        }
+    }
+
+    loadPersonalizationFromCookies() {
+        try {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'olivia-personalization') {
+                    return JSON.parse(decodeURIComponent(value));
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error loading personalization from cookies:', error);
+            return null;
+        }
+    }
+
+    checkFirstTimeSetup() {
+        // Verificar si existen datos de personalización
+        const hasLocalData = localStorage.getItem('olivia-personalization');
+        const hasCookieData = this.loadPersonalizationFromCookies();
+        
+        if (!hasLocalData && !hasCookieData) {
+            // Primera vez, mostrar modal
+            this.showSettingsModal();
+        }
+    }
+
+    // Función para personalizar mensajes con el nombre del niño
+    personalizeMessage(message) {
+        return message.replace(/{name}/g, this.childName);
+    }
+
+    // Función para actualizar todos los títulos dinámicos
+    updateDynamicTitles() {
+        try {
+            const pageTitle = document.getElementById('pageTitle');
+            const mainTitle = document.getElementById('mainTitle');
+            const resultsTitle = document.getElementById('resultsTitle');
+            
+            if (pageTitle) {
+                pageTitle.textContent = this.personalizeMessage('¡Aprende con {name}! 🌟');
+            }
+            
+            if (mainTitle) {
+                mainTitle.textContent = this.personalizeMessage('¡Aprende con {name}! 🌟');
+            }
+            
+            if (resultsTitle) {
+                resultsTitle.textContent = this.personalizeMessage('¡Muy bien, {name}! 🎉');
+            }
+        } catch (error) {
+            console.error('Error updating dynamic titles:', error);
+        }
+    }
+
+    // ===== FUNCIONES DEL MODAL DE CONFIGURACIÓN =====
+    showSettingsModal() {
+        const modal = document.getElementById('settingsModal');
+        const nameInput = document.getElementById('childName');
+        const voiceSelect = document.getElementById('voiceSelect');
+        
+        // Prellenar con valores actuales
+        nameInput.value = this.childName;
+        
+        // Cargar voces disponibles
+        this.populateVoiceSelect();
+        
+        // Escuchar cambios de voces para recargar el selector
+        if (this.speechSynthesis.getVoices().length === 0) {
+            const onVoicesChanged = () => {
+                this.populateVoiceSelect();
+                this.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+            };
+            this.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+        }
+        
+        // Mostrar modal con animación
+        modal.classList.add('show');
+        
+        // Focus en el input del nombre
+        setTimeout(() => nameInput.focus(), 300);
+    }
+
+    hideSettingsModal() {
+        const modal = document.getElementById('settingsModal');
+        modal.classList.remove('show');
+    }
+
+    populateVoiceSelect() {
+        const voiceSelect = document.getElementById('voiceSelect');
+        const voices = this.speechSynthesis.getVoices();
+        
+        // Limpiar opciones existentes
+        voiceSelect.innerHTML = '';
+        
+        if (voices.length === 0) {
+            voiceSelect.innerHTML = '<option value="">Cargando voces...</option>';
+            // Intentar recargar voces después de un momento
+            setTimeout(() => {
+                if (this.speechSynthesis.getVoices().length > 0) {
+                    this.populateVoiceSelect();
+                } else {
+                    voiceSelect.innerHTML = '<option value="">No hay voces disponibles</option>';
+                }
+            }, 500);
+            return;
+        }
+        
+        // Filtrar voces en español o agregar todas si no hay españolas
+        let spanishVoices = voices.filter(voice => 
+            voice.lang.startsWith('es') || 
+            voice.name.toLowerCase().includes('span') ||
+            voice.name.toLowerCase().includes('helena') ||
+            voice.name.toLowerCase().includes('maria')
+        );
+        
+        if (spanishVoices.length === 0) {
+            spanishVoices = voices.slice(0, 10); // Máximo 10 voces
+        }
+        
+        // Opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '🤖 Voz automática (recomendada)';
+        voiceSelect.appendChild(defaultOption);
+        
+        // Agregar voces disponibles
+        spanishVoices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            
+            // Nombres más amigables
+            let displayName = voice.name;
+            if (voice.name.includes('Helena')) displayName = '🎭 Helena (Mujer)';
+            else if (voice.name.includes('Maria')) displayName = '👩 María (Mujer)';
+            else if (voice.name.includes('Google')) displayName = `🗣️ ${voice.name.replace('Google ', '')}`;
+            else if (voice.name.includes('Microsoft')) displayName = `🎤 ${voice.name.replace('Microsoft ', '')}`;
+            else displayName = `🗣️ ${voice.name}`;
+            
+            option.textContent = displayName;
+            voiceSelect.appendChild(option);
+        });
+        
+        // Seleccionar voz actual si existe
+        if (this.selectedVoice) {
+            voiceSelect.value = this.selectedVoice;
         }
     }
 
@@ -691,6 +926,12 @@ class PalabrasGame {
             wordInput.value = '';
             wordInput.disabled = false;
         }
+        
+        // Limpiar letras táctiles de la pregunta anterior
+        const touchLetters = document.querySelectorAll('.touch-letter');
+        touchLetters.forEach(letter => {
+            letter.classList.remove('used', 'adding');
+        });
     }
 
     displayQuestion() {
@@ -752,6 +993,9 @@ class PalabrasGame {
             temp: true // Marcador para listeners temporales
         });
 
+        // Configurar letras táctiles para dispositivos sin teclado físico
+        this.setupTouchLetters(palabra);
+
         wordInput.focus();
         
         // Inicializar estado del botón de envío
@@ -797,12 +1041,20 @@ class PalabrasGame {
         if (event.key === 'Enter') {
             event.preventDefault();
             this.validateAnswer();
+        } else if (event.key === 'Backspace' || event.key === 'Delete') {
+            // Sincronizar con letras táctiles cuando se borra con teclado físico
+            setTimeout(() => {
+                this.syncTouchLettersWithInput();
+            }, 10);
         }
     }
 
     handleInputChange(event) {
         const input = event.target;
         input.value = input.value.toLowerCase().replace(/[^a-záéíóúñü]/g, '');
+        
+        // Sincronizar letras táctiles con el input cuando se escribe con teclado físico
+        this.syncTouchLettersWithInput();
         
         // Actualizar estado del botón de envío
         this.updateSubmitButton();
@@ -910,22 +1162,22 @@ class PalabrasGame {
     checkStreakMilestones() {
         if (this.contadorRacha === 5) {
             setTimeout(() => {
-                this.showStreakMessage('¡Súper Olivia! 5 seguidos! 🌈');
+                this.showStreakMessage(this.personalizeMessage('¡Súper {name}! 5 seguidos! 🌈'));
                 this.playWinStreakSound();
-                this.speakWord('¡Súper Olivia! 5 seguidos!');
+                this.speakWord(this.personalizeMessage('¡Súper {name}! 5 seguidos!'));
             }, 1500);
         } else if (this.contadorRacha === 10) {
             setTimeout(() => {
                 this.showStreakMessage('¡INCREÍBLE OLIVIA! ¡10 PERFECTOS! 🎊🦄✨');
                 this.playWinStreakSound();
-                this.speakWord('¡Increíble Olivia! 10 perfectos!');
+                this.speakWord(this.personalizeMessage('¡Increíble {name}! 10 perfectos!'));
                 this.showConfetti();
             }, 1500);
         } else if (this.contadorRacha === 15) {
             setTimeout(() => {
                 this.showStreakMessage('¡ESPECTACULAR OLIVIA! ¡15 SEGUIDOS! 🌟⚡🎆');
                 this.playWinStreakSound();
-                this.speakWord('¡Espectacular Olivia! 15 seguidos!');
+                this.speakWord(this.personalizeMessage('¡Espectacular {name}! 15 seguidos!'));
                 this.showConfetti();
             }, 1500);
         } else if (this.contadorRacha === 20) {
@@ -1213,11 +1465,11 @@ class PalabrasGame {
         
         setTimeout(() => {
             if (this.score >= totalQuestions * 0.8) {
-                this.speakWord('¡Excelente trabajo, Olivia!');
+                this.speakWord(this.personalizeMessage('¡Excelente trabajo, {name}!'));
             } else if (this.score >= totalQuestions * 0.6) {
-                this.speakWord('¡Muy bien, Olivia!');
+                this.speakWord(this.personalizeMessage('¡Muy bien, {name}!'));
             } else {
-                this.speakWord('¡Sigue practicando, Olivia!');
+                this.speakWord(this.personalizeMessage('¡Sigue practicando, {name}!'));
             }
         }, 500);
     }
@@ -1241,7 +1493,7 @@ class PalabrasGame {
         
         // Reproducir mensaje especial
         setTimeout(() => {
-            this.speakWord('¡Olivia es perfecta! ¡Veinte de veinte! ¡Eres una súper estrella!');
+            this.speakWord(this.personalizeMessage('¡{name} es perfecta! ¡Veinte de veinte! ¡Eres una súper estrella!'));
         }, 1000);
         
         // Mostrar confetti
@@ -1274,7 +1526,7 @@ class PalabrasGame {
         // Reproducir sonido de applause y mensaje
         this.playApplauseSound();
         setTimeout(() => {
-            this.speakWord(`¡Felicidades Olivia! Has completado todas las palabras del modo ${difficultyText}!`);
+            this.speakWord(this.personalizeMessage(`¡Felicidades {name}! Has completado todas las palabras del modo ${difficultyText}!`));
         }, 1000);
         
         // Mostrar confetti
@@ -1290,7 +1542,7 @@ class PalabrasGame {
 
     // Función para resetear puntos
     resetPoints() {
-        if (confirm('¿Estás segura de que quieres reiniciar todos los puntos de Olivia?')) {
+        if (confirm(this.personalizeMessage('¿Estás segura de que quieres reiniciar todos los puntos de {name}?'))) {
             this.totalStars = 0;
             this.contadorRacha = 0;
             this.maxRacha = 0;
@@ -1350,6 +1602,16 @@ class PalabrasGame {
             }
         });
         
+        // Mostrar/ocultar letras táctiles según la pantalla
+        const touchLettersContainer = document.getElementById('touchLettersContainer');
+        if (touchLettersContainer) {
+            if (screenId === 'gameScreen') {
+                touchLettersContainer.style.display = 'block';
+            } else {
+                touchLettersContainer.style.display = 'none';
+            }
+        }
+        
         // Mostrar/ocultar elementos del header según la pantalla
         this.updateHeaderVisibility(screenId);
     }
@@ -1374,6 +1636,253 @@ class PalabrasGame {
         this.currentWord = null;
         this.clearFeedback();
     }
+
+    // ===== SISTEMA DE LETRAS TÁCTILES PARA DISPOSITIVOS SIN TECLADO =====
+
+    setupTouchLetters(palabra) {
+        const touchLettersContainer = document.getElementById('touchLettersContainer');
+        const touchLettersGrid = document.getElementById('touchLetters');
+        const clearBtn = document.getElementById('clearLettersBtn');
+        
+        if (!touchLettersContainer || !touchLettersGrid || !clearBtn) return;
+
+        // Mostrar el contenedor
+        touchLettersContainer.style.display = 'block';
+        
+        // Limpiar letras anteriores
+        touchLettersGrid.innerHTML = '';
+        
+        // Generar array de letras desordenadas
+        const letters = this.generateShuffledLetters(palabra);
+        
+        // Crear botones de letras táctiles
+        letters.forEach((letter, index) => {
+            const letterBtn = this.createTouchLetter(letter, index);
+            touchLettersGrid.appendChild(letterBtn);
+        });
+
+        // Configurar botón de limpiar
+        this.setupClearButton(clearBtn);
+        
+        // Agregar clase de animación de entrada
+        touchLettersContainer.classList.add('touch-container-fade-in');
+    }
+
+    generateShuffledLetters(palabra) {
+        // Convertir palabra a array de letras
+        const letters = palabra.toLowerCase().split('');
+        
+        // Desordenar usando Fisher-Yates shuffle para garantizar aleatoriedad
+        const shuffled = [...letters];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        return shuffled;
+    }
+
+    createTouchLetter(letter, index) {
+        const letterBtn = document.createElement('button');
+        letterBtn.className = 'touch-letter';
+        letterBtn.textContent = letter.toUpperCase();
+        letterBtn.dataset.letter = letter;
+        letterBtn.dataset.index = index;
+        
+        // Optimización: usar event delegation o listeners directos
+        letterBtn.addEventListener('click', (e) => this.onTouchLetterClick(e));
+        letterBtn.addEventListener('touchstart', (e) => this.onTouchLetterTouch(e), { passive: true });
+        
+        // Track listener para cleanup
+        this.eventListeners.push({
+            element: letterBtn,
+            event: 'click',
+            handler: (e) => this.onTouchLetterClick(e),
+            temp: true
+        });
+        
+        return letterBtn;
+    }
+
+    onTouchLetterClick(event) {
+        event.preventDefault();
+        const letterBtn = event.currentTarget;
+        const letter = letterBtn.dataset.letter;
+        
+        // Evitar doble click
+        if (letterBtn.classList.contains('used') || letterBtn.classList.contains('adding')) {
+            return;
+        }
+        
+        this.addLetterToInput(letter, letterBtn);
+    }
+
+    onTouchLetterTouch(event) {
+        // Feedback visual inmediato para touch
+        const letterBtn = event.currentTarget;
+        letterBtn.style.transform = 'translateY(-1px) scale(0.98)';
+        
+        setTimeout(() => {
+            letterBtn.style.transform = '';
+        }, 150);
+    }
+
+    addLetterToInput(letter, letterBtn) {
+        const wordInput = document.getElementById('wordInput');
+        if (!wordInput || !this.currentWord) return;
+
+        const currentValue = wordInput.value;
+        const targetLength = this.currentWord.palabra.length;
+        
+        // Verificar si ya alcanzó la longitud máxima
+        if (currentValue.length >= targetLength) {
+            return;
+        }
+        
+        // Agregar animación de feedback
+        letterBtn.classList.add('adding');
+        
+        // Agregar letra al input
+        wordInput.value = currentValue + letter;
+        
+        // Marcar letra como usada después de la animación
+        setTimeout(() => {
+            letterBtn.classList.remove('adding');
+            letterBtn.classList.add('used');
+        }, 300);
+        
+        // Reproducir sonido de feedback (opcional)
+        this.playTouchLetterSound();
+        
+        // Actualizar estado del botón de envío
+        this.updateSubmitButton();
+        
+        // Trigger input event para mantener consistencia
+        wordInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    setupClearButton(clearBtn) {
+        // Limpiar listeners anteriores
+        const existingListener = this.eventListeners.find(
+            listener => listener.element === clearBtn && listener.event === 'click'
+        );
+        if (existingListener) {
+            clearBtn.removeEventListener('click', existingListener.handler);
+        }
+        
+        const clearHandler = () => this.clearAllLetters();
+        clearBtn.addEventListener('click', clearHandler);
+        
+        // Track listener
+        this.eventListeners.push({
+            element: clearBtn,
+            event: 'click',
+            handler: clearHandler,
+            temp: true
+        });
+    }
+
+    clearAllLetters() {
+        const wordInput = document.getElementById('wordInput');
+        const touchLetters = document.querySelectorAll('.touch-letter');
+        
+        if (wordInput) {
+            wordInput.value = '';
+            // Trigger input event para consistencia
+            wordInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // Restaurar todas las letras táctiles
+        touchLetters.forEach(letter => {
+            letter.classList.remove('used', 'adding');
+        });
+        
+        // Reproducir sonido de limpieza
+        this.playTouchClearSound();
+        
+        // Actualizar botón de envío
+        this.updateSubmitButton();
+        
+        // Re-enfocar el input si es necesario
+        if (wordInput) {
+            wordInput.focus();
+        }
+    }
+
+    playTouchLetterSound() {
+        // Sonido sutil para feedback táctil (usando TTS como fallback)
+        if (this.audioFiles.shine) {
+            const audio = this.audioFiles.shine.cloneNode();
+            audio.volume = 0.3; // Volumen bajo para no ser molesto
+            audio.play().catch(() => {
+                // Silenciar error, es solo feedback opcional
+            });
+        }
+    }
+
+    playTouchClearSound() {
+        // Sonido diferente para limpiar
+        if (this.audioFiles.break) {
+            const audio = this.audioFiles.break.cloneNode();
+            audio.volume = 0.2; // Volumen muy bajo
+            audio.play().catch(() => {
+                // Silenciar error
+            });
+        }
+    }
+
+    hideTouchLetters() {
+        const touchLettersContainer = document.getElementById('touchLettersContainer');
+        if (touchLettersContainer) {
+            touchLettersContainer.style.display = 'none';
+        }
+    }
+
+    syncTouchLettersWithInput() {
+        const wordInput = document.getElementById('wordInput');
+        const touchLetters = document.querySelectorAll('.touch-letter');
+        
+        if (!wordInput || !this.currentWord) return;
+        
+        const currentValue = wordInput.value.toLowerCase();
+        const targetWord = this.currentWord.palabra.toLowerCase();
+        
+        // Crear un mapa de frecuencias de letras en el input actual
+        const inputLetterCount = {};
+        for (let char of currentValue) {
+            inputLetterCount[char] = (inputLetterCount[char] || 0) + 1;
+        }
+        
+        // Crear un mapa de frecuencias de letras en la palabra objetivo
+        const targetLetterCount = {};
+        for (let char of targetWord) {
+            targetLetterCount[char] = (targetLetterCount[char] || 0) + 1;
+        }
+        
+        // Resetear todas las letras táctiles y marcar las utilizadas
+        touchLetters.forEach(letterBtn => {
+            const letter = letterBtn.dataset.letter;
+            letterBtn.classList.remove('used', 'adding');
+            
+            // Contar cuántas veces aparece esta letra en las letras táctiles antes de esta posición
+            const letterIndex = parseInt(letterBtn.dataset.index);
+            let letterAppearanceIndex = 0;
+            
+            for (let i = 0; i < letterIndex; i++) {
+                const prevBtn = document.querySelector(`.touch-letter[data-index="${i}"]`);
+                if (prevBtn && prevBtn.dataset.letter === letter) {
+                    letterAppearanceIndex++;
+                }
+            }
+            
+            // Verificar si esta instancia específica de la letra debería estar marcada como usada
+            const usedCount = inputLetterCount[letter] || 0;
+            if (letterAppearanceIndex < usedCount) {
+                letterBtn.classList.add('used');
+            }
+        });
+    }
+
 }
 
 let game;
@@ -1432,5 +1941,76 @@ function listenToWord() {
 function resetPoints() {
     if (game) {
         game.resetPoints();
+    }
+}
+
+// ===== FUNCIONES GLOBALES DEL MODAL DE CONFIGURACIÓN =====
+function showSettingsModal() {
+    if (game) {
+        game.showSettingsModal();
+    }
+}
+
+function saveSettings() {
+    if (game) {
+        const nameInput = document.getElementById('childName');
+        const voiceSelect = document.getElementById('voiceSelect');
+        
+        // Validar y guardar nombre
+        let name = nameInput.value.trim();
+        if (name.length === 0) {
+            name = 'Olivia'; // Fallback al nombre por defecto
+        }
+        
+        // Sanitizar el nombre (solo letras, espacios y algunos caracteres especiales)
+        name = name.replace(/[^a-zA-ZÁáÉéÍíÓóÚúÑñü\s]/g, '').slice(0, 20);
+        
+        if (name.length === 0) {
+            name = 'Olivia'; // Fallback si se eliminaron todos los caracteres
+        }
+        
+        game.childName = name;
+        game.selectedVoice = voiceSelect.value;
+        
+        // Guardar configuración
+        game.savePersonalizationSettings();
+        
+        // Actualizar voz si se seleccionó una específica
+        if (game.selectedVoice) {
+            const voices = game.speechSynthesis.getVoices();
+            const selectedVoice = voices.find(v => v.name === game.selectedVoice);
+            if (selectedVoice) {
+                game.spanishVoice = selectedVoice;
+            }
+        }
+        
+        // Actualizar títulos dinámicos
+        game.updateDynamicTitles();
+        
+        // Cerrar modal
+        game.hideSettingsModal();
+        
+        // Mostrar mensaje de confirmación personalizado
+        game.speakWord(`¡Hola ${game.childName}! ¡Todo está listo para jugar!`);
+    }
+}
+
+function useDefaultSettings() {
+    if (game) {
+        // Usar configuración por defecto
+        game.childName = 'Olivia';
+        game.selectedVoice = null;
+        
+        // Guardar configuración
+        game.savePersonalizationSettings();
+        
+        // Actualizar títulos dinámicos
+        game.updateDynamicTitles();
+        
+        // Cerrar modal
+        game.hideSettingsModal();
+        
+        // Mensaje de bienvenida
+        game.speakWord('¡Hola Olivia! ¡Vamos a aprender juntas!');
     }
 }

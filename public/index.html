@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Aprende con Olivia! 🌟</title>
+    <title id="pageTitle">¡Aprende con Olivia! 🌟</title>
     
     <!-- Fuentes educativas optimizadas para aprendizaje -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
                 <button class="back-btn-header hidden" id="backBtnHeader" onclick="goBack()" title="Volver al menú">
                     <span class="back-icon">←</span>
                 </button>
-                <h1 class="title">¡Aprende con Olivia! 🌟</h1>
+                <h1 class="title" id="mainTitle">¡Aprende con Olivia! 🌟</h1>
             </div>
             <div class="header-center">
                 <div class="progress hidden" id="progressHeader">
@@ -43,6 +43,7 @@
                         <span class="streak-number" id="streakCounter">0</span>
                     </div>
                     <button class="reset-btn" onclick="resetPoints()" title="Reiniciar puntos">🔄</button>
+                    <button class="help-btn" onclick="showSettingsModal()" title="Configuración">❓</button>
                 </div>
             </div>
         </header>
@@ -82,6 +83,17 @@
                     </button>
                 </div>
 
+                <!-- Letras táctiles para dispositivos sin teclado físico -->
+                <div id="touchLettersContainer" class="touch-letters-container">
+                    <div class="touch-letters-header">
+                        <span class="touch-letters-title">Toca las letras:</span>
+                        <button id="clearLettersBtn" class="clear-letters-btn" title="Borrar todo">
+                            <span class="clear-icon">🗑️</span>
+                        </button>
+                    </div>
+                    <div id="touchLetters" class="touch-letters-grid"></div>
+                </div>
+
                 <div id="feedbackContainer" class="feedback-container">
                     <div id="feedbackMessage" class="feedback-message"></div>
                 </div>
@@ -119,7 +131,7 @@
 
             <div id="resultsScreen" class="results-screen hidden">
                 <div class="results-content">
-                    <h2>¡Muy bien, Olivia! 🎉</h2>
+                    <h2 id="resultsTitle">¡Muy bien, Olivia! 🎉</h2>
                     <div class="score">
                         <span class="score-text">Puntuación:</span>
                         <span id="finalScore" class="score-number">0</span>
@@ -135,6 +147,53 @@
     </div>
 
     <div id="confetti-container" class="confetti-container"></div>
+
+    <!-- Modal de Configuración Inicial -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>¡Hola! 👋</h2>
+                <p class="modal-subtitle">Vamos a personalizar tu experiencia</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="settings-section">
+                    <label for="childName" class="settings-label">
+                        <span class="label-icon">✨</span>
+                        ¿Cómo te llamas?
+                    </label>
+                    <input 
+                        type="text" 
+                        id="childName" 
+                        class="settings-input" 
+                        placeholder="Escribe tu nombre aquí..."
+                        maxlength="20"
+                    />
+                    <p class="settings-help">Te diremos tu nombre cuando juegues ❤️</p>
+                </div>
+
+                <div class="settings-section">
+                    <label for="voiceSelect" class="settings-label">
+                        <span class="label-icon">🗣️</span>
+                        Elige la voz que más te guste
+                    </label>
+                    <select id="voiceSelect" class="settings-select">
+                        <option value="">Buscando voces disponibles...</option>
+                    </select>
+                    <p class="settings-help">Esta voz pronunciará las palabras</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-default" onclick="useDefaultSettings()">
+                    Usar predeterminado
+                </button>
+                <button class="modal-btn modal-btn-primary" onclick="saveSettings()">
+                    ¡Listo! 🌟
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

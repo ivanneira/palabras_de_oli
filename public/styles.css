@@ -1418,3 +1418,591 @@ body::before {
         border-width: 3px;
     }
 }
+
+/* ===== LETRAS TÁCTILES PARA DISPOSITIVOS SIN TECLADO ===== */
+.touch-letters-container {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-top: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(147, 112, 219, 0.1);
+    position: relative;
+}
+
+.touch-letters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.touch-letters-title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+    letter-spacing: 0.02em;
+}
+
+.clear-letters-btn {
+    background: linear-gradient(45deg, #FFB6C1, #FFC0CB);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+    font-size: var(--text-sm);
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.clear-letters-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    background: linear-gradient(45deg, #FF9AA2, #FFB3BA);
+}
+
+.clear-letters-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+.clear-letters-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.clear-letters-btn:active::before {
+    width: 100px;
+    height: 100px;
+}
+
+.clear-icon {
+    font-size: var(--text-lg);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.touch-letters-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+    align-items: center;
+    min-height: 60px;
+}
+
+.touch-letter {
+    background: linear-gradient(45deg, var(--color-primary), var(--color-primary-light));
+    color: var(--color-text-on-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    
+    /* Touch targets optimizados para dedos pequeños */
+    min-width: 52px;
+    min-height: 52px;
+    padding: var(--space-md);
+    
+    /* Mejorar accesibilidad táctil */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Forzar compositing layer para mejor rendimiento en móviles */
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.touch-letter:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--shadow-lg);
+    background: linear-gradient(45deg, var(--color-primary-dark), var(--color-primary));
+}
+
+.touch-letter:active {
+    transform: translateY(-1px) scale(0.98);
+    box-shadow: var(--shadow-sm);
+    animation: touch-letter-press 0.2s ease-out;
+}
+
+.touch-letter::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.touch-letter:active::before {
+    width: 80px;
+    height: 80px;
+}
+
+/* Letras usadas - cambio visual para feedback */
+.touch-letter.used {
+    background: linear-gradient(45deg, #DDA0DD, #E6E6FA);
+    color: var(--color-text-secondary);
+    transform: scale(0.9);
+    opacity: 0.6;
+    cursor: default;
+    pointer-events: none;
+}
+
+.touch-letter.used::before {
+    display: none;
+}
+
+/* Animaciones específicas para letras táctiles */
+@keyframes touch-letter-press {
+    0% { transform: translateY(-1px) scale(0.98); }
+    50% { transform: translateY(-2px) scale(0.95); }
+    100% { transform: translateY(-1px) scale(0.98); }
+}
+
+@keyframes letter-add-to-input {
+    0% { 
+        transform: scale(1) translateY(0); 
+        opacity: 1; 
+    }
+    50% { 
+        transform: scale(1.2) translateY(-10px); 
+        opacity: 0.8; 
+    }
+    100% { 
+        transform: scale(0.8) translateY(-30px); 
+        opacity: 0; 
+    }
+}
+
+.touch-letter.adding {
+    animation: letter-add-to-input 0.6s ease-out;
+    pointer-events: none;
+}
+
+/* Responsive para diferentes tamaños de pantalla */
+@media (max-width: 768px) {
+    .touch-letters-container {
+        margin-top: var(--space-md);
+        padding: var(--space-md);
+    }
+    
+    .touch-letter {
+        min-width: 48px;
+        min-height: 48px;
+        font-size: var(--text-xl);
+    }
+    
+    .touch-letters-grid {
+        gap: var(--space-xs);
+    }
+}
+
+@media (max-width: 480px) {
+    .touch-letter {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: var(--text-lg);
+        padding: var(--space-sm);
+    }
+    
+    .touch-letters-header {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: center;
+    }
+}
+
+/* Animación de entrada para el contenedor */
+.touch-letters-container {
+    animation: touch-container-fade-in 0.5s ease-out;
+}
+
+@keyframes touch-container-fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estados especiales para experiencia infantil */
+.touch-letters-grid.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-light);
+    font-style: italic;
+    min-height: 80px;
+}
+
+.touch-letters-grid.empty::before {
+    content: '¡Preparando letras mágicas! ✨';
+    font-size: var(--text-base);
+}
+
+/* Efectos de corazones para el theme */
+.touch-letter::after {
+    content: '💜';
+    position: absolute;
+    top: -20px;
+    right: -10px;
+    font-size: 0.8rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease-out;
+}
+
+.touch-letter:hover::after {
+    opacity: 1;
+    top: -15px;
+    animation: float 1s ease-in-out infinite;
+}
+
+/* ===== BOTÓN DE AYUDA/CONFIGURACIÓN ===== */
+.help-btn {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: var(--text-lg);
+    color: var(--color-text-on-primary);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: var(--space-sm);
+}
+
+.help-btn:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+}
+
+/* ===== MODAL DE CONFIGURACIÓN ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(147, 112, 219, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--space-lg);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease-out;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 20px 60px rgba(147, 112, 219, 0.3);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(30px) scale(0.9);
+    transition: all 0.3s ease-out;
+}
+
+.modal-overlay.show .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.modal-header {
+    text-align: center;
+    padding: var(--space-2xl) var(--space-2xl) var(--space-xl);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    color: var(--color-text-on-primary);
+    position: relative;
+}
+
+.modal-header::before {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 20px solid var(--color-primary-light);
+}
+
+.modal-header h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: 600;
+    margin: 0 0 var(--space-sm) 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modal-subtitle {
+    font-size: var(--text-lg);
+    margin: 0;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.modal-body {
+    padding: var(--space-2xl);
+}
+
+.settings-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-md);
+    text-align: left;
+}
+
+.label-icon {
+    font-size: var(--text-xl);
+    width: 24px;
+    text-align: center;
+}
+
+.settings-input {
+    width: 100%;
+    padding: var(--space-lg);
+    font-size: var(--text-lg);
+    font-family: var(--font-primary);
+    border: 3px solid rgba(147, 112, 219, 0.2);
+    border-radius: var(--radius-lg);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    transition: var(--transition-normal);
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(147, 112, 219, 0.1);
+    background: var(--color-surface);
+}
+
+.settings-input::placeholder {
+    color: var(--color-text-light);
+    font-style: italic;
+}
+
+.settings-select {
+    width: 100%;
+    padding: var(--space-lg);
+    font-size: var(--text-base);
+    font-family: var(--font-primary);
+    border: 3px solid rgba(147, 112, 219, 0.2);
+    border-radius: var(--radius-lg);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    transition: var(--transition-normal);
+    cursor: pointer;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(147, 112, 219, 0.1);
+    background: var(--color-surface);
+}
+
+.settings-help {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: var(--space-sm) 0 0 0;
+    text-align: center;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.modal-footer {
+    padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
+    display: flex;
+    gap: var(--space-lg);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.modal-btn {
+    padding: var(--space-lg) var(--space-2xl);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    font-family: var(--font-display);
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    min-width: 140px;
+    min-height: 52px;
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-btn-default {
+    background: linear-gradient(135deg, var(--color-accent), #F0E6FF);
+    color: var(--color-text-primary);
+    border: 2px solid rgba(147, 112, 219, 0.3);
+}
+
+.modal-btn-default:hover {
+    background: linear-gradient(135deg, #E6E6FA, #DDA0DD);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.modal-btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    color: var(--color-text-on-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.modal-btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.modal-btn:active::before {
+    width: 200px;
+    height: 200px;
+}
+
+/* ===== RESPONSIVE MODAL ===== */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: var(--space-md);
+    }
+    
+    .modal-content {
+        max-width: 100%;
+    }
+    
+    .modal-header {
+        padding: var(--space-xl) var(--space-xl) var(--space-lg);
+    }
+    
+    .modal-header h2 {
+        font-size: var(--text-2xl);
+    }
+    
+    .modal-body {
+        padding: var(--space-xl);
+    }
+    
+    .modal-footer {
+        padding: var(--space-lg) var(--space-xl) var(--space-xl);
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .modal-btn {
+        width: 100%;
+        max-width: 280px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-overlay {
+        padding: var(--space-sm);
+    }
+    
+    .modal-header {
+        padding: var(--space-lg) var(--space-lg) var(--space-md);
+    }
+    
+    .modal-header h2 {
+        font-size: var(--text-xl);
+    }
+    
+    .modal-subtitle {
+        font-size: var(--text-base);
+    }
+    
+    .modal-body {
+        padding: var(--space-lg);
+    }
+    
+    .settings-label {
+        font-size: var(--text-base);
+    }
+    
+    .settings-input {
+        font-size: var(--text-base);
+        padding: var(--space-md);
+    }
+}
