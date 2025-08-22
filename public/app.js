@@ -1138,12 +1138,11 @@ class PalabrasGame {
     }
 
     updateProgress() {
-        const currentElement = document.getElementById('currentQuestion');
-        const totalElement = document.getElementById('totalQuestions');
+        const remainingElement = document.getElementById('remainingWords');
         
-        if (currentElement && totalElement) {
-            currentElement.textContent = this.currentQuestion + 1;
-            totalElement.textContent = this.currentWords.length;
+        if (remainingElement) {
+            const remaining = this.currentWords.length - this.currentQuestion;
+            remainingElement.textContent = remaining > 0 ? `Quedan ${remaining} palabras` : 'Última palabra';
         }
     }
 
@@ -1160,6 +1159,12 @@ class PalabrasGame {
         
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('starsEarned').textContent = starsEarned;
+        
+        // Actualizar el total dinámico en la pantalla de resultados
+        const scoreTotalElement = document.getElementById('scoreTotalDynamic');
+        if (scoreTotalElement) {
+            scoreTotalElement.textContent = `/ ${totalQuestions}`;
+        }
         
         // Easter egg: 20/20 perfectas = pantalla especial de unicornio violeta
         if (this.score === totalQuestions && totalQuestions === 20) {
