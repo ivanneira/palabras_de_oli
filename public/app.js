@@ -38,6 +38,12 @@ class PalabrasGame {
         // Event listeners cleanup tracking
         this.eventListeners = [];
         
+        // Sistema robusto de alineación responsiva
+        this.resizeObserver = null;
+        this.orientationChangeThrottle = null;
+        this.alignmentCache = new Map();
+        this.currentInputElement = null;
+        
         this.audioFiles = {
             win: null,
             lose: null,
@@ -591,6 +597,162 @@ class PalabrasGame {
         modal.classList.remove('show');
     }
 
+    // ===== FUNCIONES DEL MODAL DE AYUDA =====
+    showHelpModal() {
+        const modal = document.getElementById('helpModal');
+        
+        // Prellenar configuraciones actuales
+        const nameInput = document.getElementById('helpChildName');
+        const voiceSelect = document.getElementById('helpVoiceSelect');
+        
+        nameInput.value = this.childName;
+        
+        // Cargar voces disponibles
+        this.populateHelpVoiceSelect();
+        
+        // Actualizar estadísticas actuales
+        this.updateHelpStats();
+        
+        // Mostrar modal con animación
+        modal.classList.add('show');
+        
+        // Asegurarse de que la pestaña de información esté activa
+        this.showHelpTab('info');
+    }
+
+    hideHelpModal() {
+        const modal = document.getElementById('helpModal');
+        modal.classList.remove('show');
+    }
+
+    showHelpTab(tabName) {
+        // Ocultar todas las pestañas y contenidos
+        const tabs = document.querySelectorAll('.help-tab');
+        const contents = document.querySelectorAll('.help-content');
+        
+        tabs.forEach(tab => tab.classList.remove('active'));
+        contents.forEach(content => content.classList.remove('active'));
+        
+        // Mostrar la pestaña y contenido seleccionados
+        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+        const activeContent = document.getElementById(`helpTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+        
+        if (activeTab && activeContent) {
+            activeTab.classList.add('active');
+            activeContent.classList.add('active');
+        }
+        
+        // Si es la pestaña de configuración, cargar voces
+        if (tabName === 'settings') {
+            this.populateHelpVoiceSelect();
+        }
+    }
+
+    populateHelpVoiceSelect() {
+        const voiceSelect = document.getElementById('helpVoiceSelect');
+        const voices = this.speechSynthesis.getVoices();
+        
+        // Limpiar opciones existentes
+        voiceSelect.innerHTML = '';
+        
+        if (voices.length === 0) {
+            voiceSelect.innerHTML = '<option value="">Cargando voces...</option>';
+            setTimeout(() => {
+                if (this.speechSynthesis.getVoices().length > 0) {
+                    this.populateHelpVoiceSelect();
+                } else {
+                    voiceSelect.innerHTML = '<option value="">No hay voces disponibles</option>';
+                }
+            }, 500);
+            return;
+        }
+        
+        // Filtrar voces en español
+        let spanishVoices = voices.filter(voice => 
+            voice.lang.startsWith('es') || 
+            voice.name.toLowerCase().includes('span') ||
+            voice.name.toLowerCase().includes('helena') ||
+            voice.name.toLowerCase().includes('spanish')
+        );
+        
+        if (spanishVoices.length === 0) {
+            spanishVoices = voices;
+        }
+        
+        // Agregar opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Voz automática (recomendada)';
+        voiceSelect.appendChild(defaultOption);
+        
+        // Agregar voces españolas disponibles
+        spanishVoices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.voiceURI || voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            
+            // Marcar como seleccionada si es la voz actual
+            if (this.selectedVoice && 
+                (this.selectedVoice.voiceURI === voice.voiceURI || 
+                 this.selectedVoice.name === voice.name)) {
+                option.selected = true;
+            }
+            
+            voiceSelect.appendChild(option);
+        });
+        
+        // Agregar event listener para previsualización
+        voiceSelect.addEventListener('change', () => {
+            const selectedVoiceId = voiceSelect.value;
+            if (selectedVoiceId) {
+                const selectedVoice = voices.find(voice => 
+                    voice.voiceURI === selectedVoiceId || voice.name === selectedVoiceId
+                );
+                if (selectedVoice) {
+                    // Previsualizar la voz
+                    this.speakWord('Hola, esta es mi voz', selectedVoice);
+                }
+            } else {
+                // Usar voz por defecto
+                this.speakWord('Hola, esta es la voz automática');
+            }
+        });
+    }
+
+    updateHelpStats() {
+        const starCountElement = document.getElementById('helpStarCount');
+        const maxStreakElement = document.getElementById('helpMaxStreak');
+        
+        if (starCountElement) {
+            starCountElement.textContent = this.totalStars;
+        }
+        if (maxStreakElement) {
+            maxStreakElement.textContent = this.maxRacha;
+        }
+    }
+
+    confirmResetPoints() {
+        // Mensaje personalizado con confirmación
+        const confirmMessage = this.personalizeMessage('¿Estás segura de que quieres reiniciar todos los puntos de {name}?');
+        
+        if (confirm(confirmMessage)) {
+            this.totalStars = 0;
+            this.contadorRacha = 0;
+            this.maxRacha = 0;
+            this.updateDisplays();
+            this.updateHelpStats();
+            this.savePointsToAPI();
+            
+            // Cerrar modal de ayuda
+            this.hideHelpModal();
+            
+            // Mensaje de confirmación con audio
+            setTimeout(() => {
+                this.speakWord('Puntos reiniciados. ¡A empezar de nuevo!');
+            }, 500);
+        }
+    }
+
     populateVoiceSelect() {
         const voiceSelect = document.getElementById('voiceSelect');
         const voices = this.speechSynthesis.getVoices();
@@ -925,6 +1087,9 @@ class PalabrasGame {
         if (wordInput) {
             wordInput.value = '';
             wordInput.disabled = false;
+            
+            // Resetear completamente la alineación al cambiar de pregunta
+            this.resetInputAlignment(wordInput);
         }
         
         // Limpiar letras táctiles de la pregunta anterior
@@ -932,6 +1097,9 @@ class PalabrasGame {
         touchLetters.forEach(letter => {
             letter.classList.remove('used', 'adding');
         });
+        
+        // Limpiar cache de alineación para la nueva pregunta
+        this.alignmentCache.clear();
     }
 
     displayQuestion() {
@@ -1003,38 +1171,224 @@ class PalabrasGame {
     }
 
     setupInputAlignment(input, palabra) {
-        // Resetear el padding izquierdo al valor original para evitar acumulación
-        input.style.paddingLeft = '';
+        // Almacenar referencia al input actual para recálculos
+        this.currentInputElement = input;
+        
+        // Configurar observador de cambios de tamaño
+        this.setupResizeObserver(input);
+        
+        // Configurar listener para cambios de orientación
+        this.setupOrientationListener();
+        
+        // Realizar alineación inicial
+        this.performInputAlignment(input, palabra);
+    }
+    
+    performInputAlignment(input, palabra) {
+        if (!input || !palabra) return;
+        
+        // Cache key basado en palabra y dimensiones actuales
+        const viewport = `${window.innerWidth}x${window.innerHeight}`;
+        const cacheKey = `${palabra}_${viewport}_${input.getBoundingClientRect().width}`;
+        
+        // Verificar cache para evitar cálculos redundantes
+        if (this.alignmentCache.has(cacheKey)) {
+            const cachedPadding = this.alignmentCache.get(cacheKey);
+            input.style.paddingLeft = cachedPadding;
+            return;
+        }
+        
+        // Resetear completamente los estilos de alineación
+        this.resetInputAlignment(input);
         
         // Crear elemento temporal para medir el ancho del texto completo de la pista
         const tempSpan = document.createElement('span');
-        tempSpan.style.visibility = 'hidden';
-        tempSpan.style.position = 'absolute';
-        tempSpan.style.fontSize = getComputedStyle(input).fontSize;
-        tempSpan.style.fontFamily = getComputedStyle(input).fontFamily;
-        tempSpan.style.fontWeight = getComputedStyle(input).fontWeight;
-        tempSpan.style.letterSpacing = getComputedStyle(input).letterSpacing;
+        tempSpan.style.cssText = `
+            visibility: hidden;
+            position: absolute;
+            top: -9999px;
+            white-space: nowrap;
+            font-family: ${getComputedStyle(input).fontFamily};
+            font-size: ${getComputedStyle(input).fontSize};
+            font-weight: ${getComputedStyle(input).fontWeight};
+            letter-spacing: ${getComputedStyle(input).letterSpacing};
+        `;
         tempSpan.textContent = palabra.toUpperCase();
         
         document.body.appendChild(tempSpan);
         const fullTextWidth = tempSpan.getBoundingClientRect().width;
         document.body.removeChild(tempSpan);
         
-        // Calcular el padding izquierdo para centrar el inicio del texto con la pista
-        const inputWidth = input.getBoundingClientRect().width;
-        const originalPaddingLeft = parseFloat(getComputedStyle(input).paddingLeft);
-        const paddingRight = parseFloat(getComputedStyle(input).paddingRight);
-        const availableWidth = inputWidth - originalPaddingLeft - paddingRight;
-        const startPosition = (availableWidth - fullTextWidth) / 2;
+        // Obtener dimensiones actuales del input
+        const inputRect = input.getBoundingClientRect();
+        const computedStyle = getComputedStyle(input);
+        const originalPaddingLeft = parseFloat(computedStyle.paddingLeft);
+        const paddingRight = parseFloat(computedStyle.paddingRight);
+        const borderLeft = parseFloat(computedStyle.borderLeftWidth);
+        const borderRight = parseFloat(computedStyle.borderRightWidth);
+        
+        // Calcular espacio disponible real
+        const totalUsedSpace = originalPaddingLeft + paddingRight + borderLeft + borderRight;
+        const availableWidth = inputRect.width - totalUsedSpace;
+        
+        // Calcular posición de inicio centrada
+        const startPosition = Math.max(
+            (availableWidth - fullTextWidth) / 2,
+            0 // Nunca usar padding negativo
+        );
+        
+        // Calcular padding final con límites
+        const finalPaddingLeft = Math.max(
+            startPosition + originalPaddingLeft,
+            originalPaddingLeft, // Mínimo: padding original
+            24 // Mínimo absoluto: 24px
+        );
         
         // Aplicar el padding calculado
-        input.style.paddingLeft = Math.max(startPosition + originalPaddingLeft, 24) + 'px';
+        input.style.paddingLeft = finalPaddingLeft + 'px';
         input.style.textAlign = 'left';
+        
+        // Guardar en cache para futuras optimizaciones
+        this.alignmentCache.set(cacheKey, finalPaddingLeft + 'px');
+        
+        // Limpiar cache si crece mucho (LRU simple)
+        if (this.alignmentCache.size > 20) {
+            const firstKey = this.alignmentCache.keys().next().value;
+            this.alignmentCache.delete(firstKey);
+        }
+    }
+    
+    resetInputAlignment(input) {
+        // Resetear completamente los estilos de alineación
+        input.style.paddingLeft = '';
+        input.style.textAlign = '';
+        
+        // Forzar recálculo de layout
+        input.offsetHeight; // Trigger reflow
     }
 
     adjustInputAlignment() {
-        // Esta función se puede usar para ajustes dinámicos si es necesario
-        // Por ahora mantiene la alineación inicial
+        // Recalcular alineación con la palabra actual si está disponible
+        if (this.currentInputElement && this.currentWord) {
+            this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
+        }
+    }
+    
+    setupResizeObserver(input) {
+        // Limpiar observador anterior si existe
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
+        
+        // Crear nuevo ResizeObserver para detectar cambios de tamaño
+        if (window.ResizeObserver) {
+            this.resizeObserver = new ResizeObserver((entries) => {
+                // Throttle para evitar demasiados recálculos
+                if (this.resizeThrottle) {
+                    clearTimeout(this.resizeThrottle);
+                }
+                
+                this.resizeThrottle = setTimeout(() => {
+                    // Solo recalcular si el input aún existe y es visible
+                    if (input && input.offsetParent && this.currentWord) {
+                        this.performInputAlignment(input, this.currentWord.palabra);
+                    }
+                }, 100); // 100ms throttle para performance
+            });
+            
+            // Observar el input y su contenedor padre
+            this.resizeObserver.observe(input);
+            const container = input.closest('.input-container');
+            if (container) {
+                this.resizeObserver.observe(container);
+            }
+        } else {
+            // Fallback para navegadores sin ResizeObserver
+            this.setupFallbackResizeListener();
+        }
+    }
+    
+    setupFallbackResizeListener() {
+        // Fallback usando window.resize para navegadores antiguos
+        const resizeHandler = () => {
+            if (this.resizeThrottle) {
+                clearTimeout(this.resizeThrottle);
+            }
+            
+            this.resizeThrottle = setTimeout(() => {
+                if (this.currentInputElement && this.currentWord) {
+                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
+                }
+            }, 150); // Throttle más alto para window.resize
+        };
+        
+        window.addEventListener('resize', resizeHandler);
+        
+        // Track para cleanup
+        this.eventListeners.push({
+            element: window,
+            event: 'resize',
+            handler: resizeHandler,
+            temp: false
+        });
+    }
+    
+    setupOrientationListener() {
+        // Listener para cambios de orientación en dispositivos móviles
+        const orientationHandler = () => {
+            // Delay más largo para cambios de orientación
+            // ya que el layout tarda más en estabilizarse
+            if (this.orientationChangeThrottle) {
+                clearTimeout(this.orientationChangeThrottle);
+            }
+            
+            this.orientationChangeThrottle = setTimeout(() => {
+                // Limpiar cache al cambiar orientación
+                this.alignmentCache.clear();
+                
+                if (this.currentInputElement && this.currentWord) {
+                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
+                }
+            }, 300); // 300ms para que el layout se estabilice
+        };
+        
+        // Múltiples eventos para máxima compatibilidad
+        const orientationEvents = ['orientationchange', 'resize'];
+        
+        orientationEvents.forEach(eventType => {
+            window.addEventListener(eventType, orientationHandler);
+            
+            this.eventListeners.push({
+                element: window,
+                event: eventType,
+                handler: orientationHandler,
+                temp: false
+            });
+        });
+        
+        // Listener adicional para cambios de viewport en dispositivos móviles
+        if ('visualViewport' in window) {
+            const viewportHandler = () => {
+                if (this.orientationChangeThrottle) {
+                    clearTimeout(this.orientationChangeThrottle);
+                }
+                
+                this.orientationChangeThrottle = setTimeout(() => {
+                    if (this.currentInputElement && this.currentWord) {
+                        this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
+                    }
+                }, 150);
+            };
+            
+            window.visualViewport.addEventListener('resize', viewportHandler);
+            
+            this.eventListeners.push({
+                element: window.visualViewport,
+                event: 'resize',
+                handler: viewportHandler,
+                temp: false
+            });
+        }
     }
 
     handleKeyInput(event) {
@@ -1587,6 +1941,32 @@ class PalabrasGame {
             }
         });
         this.eventListeners = [];
+        
+        // Cleanup específico para alineación
+        this.cleanupAlignmentResources();
+    }
+    
+    cleanupAlignmentResources() {
+        // Cleanup del ResizeObserver
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
+        
+        // Cleanup de throttles
+        if (this.resizeThrottle) {
+            clearTimeout(this.resizeThrottle);
+            this.resizeThrottle = null;
+        }
+        
+        if (this.orientationChangeThrottle) {
+            clearTimeout(this.orientationChangeThrottle);
+            this.orientationChangeThrottle = null;
+        }
+        
+        // Limpiar referencias
+        this.currentInputElement = null;
+        this.alignmentCache.clear();
     }
 
     showScreen(screenId) {
@@ -1609,11 +1989,26 @@ class PalabrasGame {
                 touchLettersContainer.style.display = 'block';
             } else {
                 touchLettersContainer.style.display = 'none';
+                
+                // Cleanup de recursos de alineación al salir del juego
+                if (screenId !== 'gameScreen') {
+                    this.cleanupAlignmentResources();
+                }
             }
         }
         
         // Mostrar/ocultar elementos del header según la pantalla
         this.updateHeaderVisibility(screenId);
+        
+        // Recalcular alineación cuando se muestra la pantalla del juego
+        if (screenId === 'gameScreen') {
+            // Delay pequeño para que el layout se estabilice
+            setTimeout(() => {
+                if (this.currentInputElement && this.currentWord) {
+                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
+                }
+            }, 100);
+        }
     }
     
     updateHeaderVisibility(screenId) {
@@ -2012,5 +2407,88 @@ function useDefaultSettings() {
         
         // Mensaje de bienvenida
         game.speakWord('¡Hola Olivia! ¡Vamos a aprender juntas!');
+    }
+}
+
+// ===== FUNCIONES GLOBALES DEL MODAL DE AYUDA =====
+function showHelpModal() {
+    if (game) {
+        game.showHelpModal();
+    }
+}
+
+function hideHelpModal() {
+    if (game) {
+        game.hideHelpModal();
+    }
+}
+
+function showHelpTab(tabName) {
+    if (game) {
+        game.showHelpTab(tabName);
+    }
+}
+
+function saveHelpSettings() {
+    if (game) {
+        const nameInput = document.getElementById('helpChildName');
+        const voiceSelect = document.getElementById('helpVoiceSelect');
+        
+        // Validar y guardar nombre
+        let name = nameInput.value.trim();
+        if (name.length === 0) {
+            name = 'Olivia'; // Fallback al nombre por defecto
+        }
+        
+        game.childName = name;
+        
+        // Guardar voz seleccionada
+        const selectedVoiceId = voiceSelect.value;
+        if (selectedVoiceId && selectedVoiceId !== '') {
+            const voices = game.speechSynthesis.getVoices();
+            const selectedVoice = voices.find(voice => voice.voiceURI === selectedVoiceId || voice.name === selectedVoiceId);
+            if (selectedVoice) {
+                game.selectedVoice = selectedVoice;
+            }
+        }
+        
+        // Guardar configuración
+        game.savePersonalizationSettings();
+        
+        // Actualizar títulos dinámicos
+        game.updateDynamicTitles();
+        
+        // Mensaje de confirmación
+        game.speakWord(`¡Configuración guardada, ${game.childName}!`);
+        
+        // Mostrar mensaje de éxito en la interfaz
+        const successMsg = document.createElement('div');
+        successMsg.textContent = '¡Configuración guardada!';
+        successMsg.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--color-success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            z-index: 10000;
+            animation: slideInRight 0.3s ease;
+        `;
+        
+        document.body.appendChild(successMsg);
+        
+        setTimeout(() => {
+            successMsg.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => successMsg.remove(), 300);
+        }, 2000);
+    }
+}
+
+function confirmResetPoints() {
+    if (game) {
+        game.confirmResetPoints();
     }
 }
