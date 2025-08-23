@@ -60,14 +60,14 @@
       "palabra": "azul",
       "categoria": "colores",
       "dificultad": "facil",
-      "imagen": "color:#0066FF",
+      "imagen": "color:#0080FF",
       "sonido": "/sounds/azul.mp3"
     },
     {
       "palabra": "verde",
       "categoria": "colores",
       "dificultad": "facil",
-      "imagen": "color:#00CC00",
+      "imagen": "color:#00AA00",
       "sonido": "/sounds/verde.mp3"
     },
     {
@@ -83,6 +83,13 @@
       "dificultad": "dificil",
       "imagen": "color:#000000",
       "sonido": "/sounds/negro.mp3"
+    },
+    {
+      "palabra": "blanco",
+      "categoria": "colores",
+      "dificultad": "facil",
+      "imagen": "color:#FFFFFF",
+      "sonido": "/sounds/blanco.mp3"
     },
     {
       "palabra": "casa",

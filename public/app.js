@@ -38,11 +38,8 @@ class PalabrasGame {
         // Event listeners cleanup tracking
         this.eventListeners = [];
         
-        // Sistema robusto de alineación responsiva
-        this.resizeObserver = null;
-        this.orientationChangeThrottle = null;
-        this.alignmentCache = new Map();
-        this.currentInputElement = null;
+        // Sistema simplificado - centrado natural por CSS
+        // Ya no necesitamos cache ni observers complejos
         
         this.audioFiles = {
             win: null,
@@ -1430,8 +1427,7 @@ class PalabrasGame {
             wordInput.value = '';
             wordInput.disabled = false;
             
-            // Resetear completamente la alineación al cambiar de pregunta
-            this.resetInputAlignment(wordInput);
+            // El input ahora usa centrado natural por CSS
         }
         
         // Limpiar letras táctiles de la pregunta anterior
@@ -1440,8 +1436,7 @@ class PalabrasGame {
             letter.classList.remove('used', 'adding');
         });
         
-        // Limpiar cache de alineación para la nueva pregunta
-        this.alignmentCache.clear();
+        // Ya no necesitamos cache con centrado natural
     }
 
     displayQuestion() {
@@ -1485,23 +1480,8 @@ class PalabrasGame {
             hintText.style.opacity = '0.6';
         }
         
-        // Configurar input para que el texto empiece alineado con las pistas
-        this.setupInputAlignment(wordInput, palabra);
-        
         // Limpiar listeners anteriores usando tracking system
         this.cleanupWordInputListeners();
-        
-        // Agregar nuevo listener para reajustar mientras se escribe
-        const alignmentHandler = () => this.adjustInputAlignment();
-        wordInput.addEventListener('input', alignmentHandler);
-        
-        // Track listener para cleanup posterior
-        this.eventListeners.push({
-            element: wordInput,
-            event: 'input',
-            handler: alignmentHandler,
-            temp: true // Marcador para listeners temporales
-        });
 
         // Configurar letras táctiles para dispositivos sin teclado físico
         this.setupTouchLetters(palabra);
@@ -1512,225 +1492,35 @@ class PalabrasGame {
         this.updateSubmitButton();
     }
 
+    // Método simplificado - ahora el input usa centrado natural por CSS
     setupInputAlignment(input, palabra) {
-        // Almacenar referencia al input actual para recálculos
-        this.currentInputElement = input;
-        
-        // Configurar observador de cambios de tamaño
-        this.setupResizeObserver(input);
-        
-        // Configurar listener para cambios de orientación
-        this.setupOrientationListener();
-        
-        // Realizar alineación inicial
-        this.performInputAlignment(input, palabra);
+        // Ya no necesitamos lógica compleja - el CSS maneja el centrado
+        console.log('Input configurado con centrado natural');
     }
     
-    performInputAlignment(input, palabra) {
-        if (!input || !palabra) return;
-        
-        // Cache key basado en palabra y dimensiones actuales
-        const viewport = `${window.innerWidth}x${window.innerHeight}`;
-        const cacheKey = `${palabra}_${viewport}_${input.getBoundingClientRect().width}`;
-        
-        // Verificar cache para evitar cálculos redundantes
-        if (this.alignmentCache.has(cacheKey)) {
-            const cachedPadding = this.alignmentCache.get(cacheKey);
-            input.style.paddingLeft = cachedPadding;
-            return;
-        }
-        
-        // Resetear completamente los estilos de alineación
-        this.resetInputAlignment(input);
-        
-        // Crear elemento temporal para medir el ancho del texto completo de la pista
-        const tempSpan = document.createElement('span');
-        tempSpan.style.cssText = `
-            visibility: hidden;
-            position: absolute;
-            top: -9999px;
-            white-space: nowrap;
-            font-family: ${getComputedStyle(input).fontFamily};
-            font-size: ${getComputedStyle(input).fontSize};
-            font-weight: ${getComputedStyle(input).fontWeight};
-            letter-spacing: ${getComputedStyle(input).letterSpacing};
-        `;
-        tempSpan.textContent = palabra.toUpperCase();
-        
-        document.body.appendChild(tempSpan);
-        const fullTextWidth = tempSpan.getBoundingClientRect().width;
-        document.body.removeChild(tempSpan);
-        
-        // Obtener dimensiones actuales del input
-        const inputRect = input.getBoundingClientRect();
-        const computedStyle = getComputedStyle(input);
-        const originalPaddingLeft = parseFloat(computedStyle.paddingLeft);
-        const paddingRight = parseFloat(computedStyle.paddingRight);
-        const borderLeft = parseFloat(computedStyle.borderLeftWidth);
-        const borderRight = parseFloat(computedStyle.borderRightWidth);
-        
-        // Calcular espacio disponible real
-        const totalUsedSpace = originalPaddingLeft + paddingRight + borderLeft + borderRight;
-        const availableWidth = inputRect.width - totalUsedSpace;
-        
-        // Calcular posición de inicio centrada
-        const startPosition = Math.max(
-            (availableWidth - fullTextWidth) / 2,
-            0 // Nunca usar padding negativo
-        );
-        
-        // Calcular padding final con límites
-        const finalPaddingLeft = Math.max(
-            startPosition + originalPaddingLeft,
-            originalPaddingLeft, // Mínimo: padding original
-            24 // Mínimo absoluto: 24px
-        );
-        
-        // Aplicar el padding calculado
-        input.style.paddingLeft = finalPaddingLeft + 'px';
-        input.style.textAlign = 'left';
-        
-        // Guardar en cache para futuras optimizaciones
-        this.alignmentCache.set(cacheKey, finalPaddingLeft + 'px');
-        
-        // Limpiar cache si crece mucho (LRU simple)
-        if (this.alignmentCache.size > 20) {
-            const firstKey = this.alignmentCache.keys().next().value;
-            this.alignmentCache.delete(firstKey);
-        }
-    }
-    
+    // Métodos simplificados - ya no necesarios con centrado natural
     resetInputAlignment(input) {
-        // Resetear completamente los estilos de alineación
-        input.style.paddingLeft = '';
-        input.style.textAlign = '';
-        
-        // Forzar recálculo de layout
-        input.offsetHeight; // Trigger reflow
+        // El CSS maneja el centrado - no hay estilos que resetear
     }
 
     adjustInputAlignment() {
-        // Recalcular alineación con la palabra actual si está disponible
-        if (this.currentInputElement && this.currentWord) {
-            this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
-        }
+        // Ya no necesitamos reajustar - centrado natural por CSS
     }
     
+    // Método simplificado - ya no necesario con centrado CSS
     setupResizeObserver(input) {
-        // Limpiar observador anterior si existe
-        if (this.resizeObserver) {
-            this.resizeObserver.disconnect();
-        }
-        
-        // Crear nuevo ResizeObserver para detectar cambios de tamaño
-        if (window.ResizeObserver) {
-            this.resizeObserver = new ResizeObserver((entries) => {
-                // Throttle para evitar demasiados recálculos
-                if (this.resizeThrottle) {
-                    clearTimeout(this.resizeThrottle);
-                }
-                
-                this.resizeThrottle = setTimeout(() => {
-                    // Solo recalcular si el input aún existe y es visible
-                    if (input && input.offsetParent && this.currentWord) {
-                        this.performInputAlignment(input, this.currentWord.palabra);
-                    }
-                }, 100); // 100ms throttle para performance
-            });
-            
-            // Observar el input y su contenedor padre
-            this.resizeObserver.observe(input);
-            const container = input.closest('.input-container');
-            if (container) {
-                this.resizeObserver.observe(container);
-            }
-        } else {
-            // Fallback para navegadores sin ResizeObserver
-            this.setupFallbackResizeListener();
-        }
+        // Ya no necesitamos observers complejos - CSS maneja el centrado
+        console.log('ResizeObserver deshabilitado - usando centrado CSS natural');
     }
     
+    // Método simplificado - ya no necesario
     setupFallbackResizeListener() {
-        // Fallback usando window.resize para navegadores antiguos
-        const resizeHandler = () => {
-            if (this.resizeThrottle) {
-                clearTimeout(this.resizeThrottle);
-            }
-            
-            this.resizeThrottle = setTimeout(() => {
-                if (this.currentInputElement && this.currentWord) {
-                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
-                }
-            }, 150); // Throttle más alto para window.resize
-        };
-        
-        window.addEventListener('resize', resizeHandler);
-        
-        // Track para cleanup
-        this.eventListeners.push({
-            element: window,
-            event: 'resize',
-            handler: resizeHandler,
-            temp: false
-        });
+        // Ya no necesitamos fallbacks - centrado natural por CSS
     }
     
+    // Método simplificado - ya no necesario
     setupOrientationListener() {
-        // Listener para cambios de orientación en dispositivos móviles
-        const orientationHandler = () => {
-            // Delay más largo para cambios de orientación
-            // ya que el layout tarda más en estabilizarse
-            if (this.orientationChangeThrottle) {
-                clearTimeout(this.orientationChangeThrottle);
-            }
-            
-            this.orientationChangeThrottle = setTimeout(() => {
-                // Limpiar cache al cambiar orientación
-                this.alignmentCache.clear();
-                
-                if (this.currentInputElement && this.currentWord) {
-                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
-                }
-            }, 300); // 300ms para que el layout se estabilice
-        };
-        
-        // Múltiples eventos para máxima compatibilidad
-        const orientationEvents = ['orientationchange', 'resize'];
-        
-        orientationEvents.forEach(eventType => {
-            window.addEventListener(eventType, orientationHandler);
-            
-            this.eventListeners.push({
-                element: window,
-                event: eventType,
-                handler: orientationHandler,
-                temp: false
-            });
-        });
-        
-        // Listener adicional para cambios de viewport en dispositivos móviles
-        if ('visualViewport' in window) {
-            const viewportHandler = () => {
-                if (this.orientationChangeThrottle) {
-                    clearTimeout(this.orientationChangeThrottle);
-                }
-                
-                this.orientationChangeThrottle = setTimeout(() => {
-                    if (this.currentInputElement && this.currentWord) {
-                        this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
-                    }
-                }, 150);
-            };
-            
-            window.visualViewport.addEventListener('resize', viewportHandler);
-            
-            this.eventListeners.push({
-                element: window.visualViewport,
-                event: 'resize',
-                handler: viewportHandler,
-                temp: false
-            });
-        }
+        // Ya no necesitamos listeners complejos - centrado natural por CSS
     }
 
     handleKeyInput(event) {
@@ -2297,9 +2087,7 @@ class PalabrasGame {
             this.orientationChangeThrottle = null;
         }
         
-        // Limpiar referencias
-        this.currentInputElement = null;
-        this.alignmentCache.clear();
+        // Ya no necesitamos limpiar referencias complejas con CSS natural
     }
 
     showScreen(screenId) {
@@ -2343,14 +2131,9 @@ class PalabrasGame {
         // Mostrar/ocultar elementos del header según la pantalla
         this.updateHeaderVisibility(screenId);
         
-        // Recalcular alineación cuando se muestra la pantalla del juego
+        // Ya no necesitamos recálculos - centrado natural por CSS
         if (screenId === 'gameScreen') {
-            // Delay pequeño para que el layout se estabilice
-            setTimeout(() => {
-                if (this.currentInputElement && this.currentWord) {
-                    this.performInputAlignment(this.currentInputElement, this.currentWord.palabra);
-                }
-            }, 100);
+            console.log('Game screen mostrada - usando centrado CSS natural');
         }
     }
     
