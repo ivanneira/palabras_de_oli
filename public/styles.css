@@ -123,6 +123,69 @@ body::before {
     gap: var(--space-xl);
 }
 
+/* Desktop: Contenedor más amplio y mejor distribuido */
+@media (min-width: 1024px) {
+    .container {
+        max-width: 1200px;
+        padding: var(--space-2xl);
+        gap: var(--space-2xl);
+    }
+}
+
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1400px;
+        padding: var(--space-3xl);
+    }
+}
+
+/* Ultra-wide desktop (1600px+): Layout especial para pantallas muy anchas */
+@media (min-width: 1600px) {
+    .container {
+        max-width: 1600px;
+    }
+    
+    /* Layout de dos columnas para el juego en pantallas ultra-wide */
+    .game-screen {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3xl);
+        align-items: start;
+    }
+    
+    .question-container {
+        grid-column: 1 / 2;
+        margin-bottom: 0;
+    }
+    
+    .input-container,
+    .touch-letters-container,
+    .feedback-container,
+    .game-controls {
+        grid-column: 2 / 3;
+    }
+    
+    /* Pantallas especiales centradas */
+    .unicorn-screen,
+    .completion-screen {
+        padding: var(--space-3xl);
+    }
+    
+    .unicorn-content,
+    .completion-content {
+        max-width: 800px;
+    }
+    
+    .unicorn-emoji {
+        font-size: 10rem;
+    }
+    
+    .unicorn-title,
+    .completion-title {
+        font-size: var(--text-6xl);
+    }
+}
+
 /* ===== HEADER ===== */
 .header {
     display: grid;
@@ -137,6 +200,32 @@ body::before {
     position: relative;
     overflow: hidden;
     min-height: 80px;
+}
+
+/* Desktop: Header optimizado para pantallas anchas */
+@media (min-width: 1024px) {
+    .header {
+        grid-template-columns: 2fr 3fr 2fr;
+        padding: var(--space-2xl) var(--space-3xl);
+        min-height: 100px;
+    }
+    
+    .title {
+        font-size: var(--text-5xl);
+    }
+    
+    .stats-container {
+        gap: var(--space-xl);
+    }
+    
+    .star-counter, .streak-counter {
+        padding: var(--space-lg) var(--space-xl);
+        min-width: 120px;
+    }
+    
+    .counter, .streak-number {
+        font-size: var(--text-2xl);
+    }
 }
 
 .header-left {
@@ -280,6 +369,33 @@ body::before {
     margin: 0 auto;
 }
 
+/* Desktop: Layout horizontal para botones del menú */
+@media (min-width: 1024px) {
+    .buttons-container {
+        flex-direction: row;
+        max-width: 1000px;
+        justify-content: center;
+        gap: var(--space-2xl);
+    }
+    
+    .game-button {
+        flex: 1;
+        max-width: 280px;
+        min-height: 120px;
+        flex-direction: column;
+        padding: var(--space-2xl);
+    }
+    
+    .button-icon {
+        font-size: var(--text-5xl);
+        margin-bottom: var(--space-md);
+    }
+    
+    .button-text {
+        font-size: var(--text-2xl);
+    }
+}
+
 .game-button {
     display: flex;
     align-items: center;
@@ -378,36 +494,187 @@ body::before {
     box-shadow: var(--shadow-sm);
 }
 
-/* Botón de atrás en el header - diseño infantil */
-.back-btn-header {
+/* ===== BOTÓN FLOTANTE OPTIMIZADO UX INFANTIL ===== */
+.floating-back-btn {
+    /* Posicionamiento flotante */
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    
+    /* Dimensiones touch-friendly para niños */
+    min-width: 56px;
+    min-height: 56px;
+    padding: 12px 16px;
+    
+    /* Estilo visual atractivo */
     background: var(--color-primary);
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 28px;
+    
+    /* Layout interno */
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: var(--transition-normal);
-    box-shadow: var(--shadow-sm);
+    gap: 8px;
+    flex-direction: column;
+    
+    /* Tipografía */
     color: var(--color-text-on-primary);
-}
-
-.back-btn-header:hover {
-    background: var(--color-primary-dark);
-    transform: translateX(-2px) scale(1.05);
-    box-shadow: var(--shadow-md);
-}
-
-.back-btn-header:active {
-    transform: translateX(-1px) scale(0.98);
-}
-
-.back-icon {
-    font-size: var(--text-xl);
+    font-family: var(--font-display);
     font-weight: 600;
+    font-size: var(--text-sm);
+    
+    /* Interacción */
+    cursor: pointer;
+    user-select: none;
+    
+    /* Sombras y transiciones */
+    box-shadow: 0 4px 20px rgba(147, 112, 219, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Animación de entrada sutil */
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+}
+
+.floating-back-btn:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation: floatingBackEnter 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+               floatingBackBreathe 3s ease-in-out infinite 1s;
+}
+
+.floating-back-btn:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 28px rgba(147, 112, 219, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.floating-back-btn:active {
+    transform: translateY(-1px) scale(0.98);
+    transition: all 0.1s ease-out;
+    animation: floatingBackPulse 0.2s ease-out;
+}
+
+.floating-back-icon {
+    font-size: 20px;
     line-height: 1;
+}
+
+.floating-back-text {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+/* Animaciones optimizadas para UX infantil */
+@keyframes floatingBackEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.8) rotate(-5deg);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translateY(-5px) scale(1.05) rotate(2deg);
+    }
+    80% {
+        transform: translateY(2px) scale(1.02) rotate(-1deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0deg);
+    }
+}
+
+/* Micro-animación de hover más atractiva */
+@keyframes floatingBackPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+/* Animación de "respiración" sutil */
+@keyframes floatingBackBreathe {
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(147, 112, 219, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        box-shadow: 0 6px 25px rgba(147, 112, 219, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* Responsive: Mobile-first approach */
+@media (max-width: 768px) {
+    .floating-back-btn {
+        /* Mobile: Bottom center más accesible */
+        bottom: 20px;
+        right: 20px;
+        left: auto;
+        
+        /* Touch target más grande para dedos pequeños */
+        min-width: 64px;
+        min-height: 64px;
+        padding: 16px;
+        
+        /* Layout horizontal en móvil */
+        flex-direction: row;
+        gap: 6px;
+        border-radius: 32px;
+    }
+    
+    .floating-back-icon {
+        font-size: 18px;
+    }
+    
+    .floating-back-text {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .floating-back-btn {
+        /* Mobile pequeño: más prominente */
+        bottom: 16px;
+        right: 50%;
+        transform: translateX(50%) translateY(0) scale(1);
+        
+        /* Solo mostrar icono en pantallas muy pequeñas */
+        min-width: 56px;
+        padding: 14px;
+    }
+    
+    .floating-back-btn:not(.hidden) {
+        transform: translateX(50%) translateY(0) scale(1);
+    }
+    
+    .floating-back-btn:hover {
+        transform: translateX(50%) translateY(-2px) scale(1.05);
+    }
+    
+    .floating-back-text {
+        display: none; /* Ocultar texto en móviles muy pequeños */
+    }
+}
+
+/* Estados especiales para accesibilidad */
+.floating-back-btn:focus {
+    outline: 3px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+.floating-back-btn:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.7);
+}
+
+/* Legacy: Mantener compatibilidad con botón header (oculto) */
+.back-btn-header {
+    display: none !important;
 }
 
 .progress {
@@ -429,6 +696,19 @@ body::before {
     text-align: center;
     border: 1px solid rgba(147, 112, 219, 0.1);
     position: relative;
+}
+
+/* Desktop: Contenedor de preguntas más espacioso */
+@media (min-width: 1024px) {
+    .question-container {
+        padding: var(--space-3xl);
+        margin-bottom: var(--space-2xl);
+    }
+    
+    .question-text {
+        font-size: var(--text-3xl);
+        margin-bottom: var(--space-2xl);
+    }
 }
 
 .question-text {
@@ -458,6 +738,26 @@ body::before {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     transition: var(--transition-normal);
+}
+
+/* Desktop: Imágenes más grandes y mejor proporcionadas */
+@media (min-width: 1024px) {
+    .question-image {
+        min-height: 400px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .question-image img {
+        max-width: 400px;
+        max-height: 400px;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .color-display {
+        width: 300px;
+        height: 300px;
+    }
 }
 
 .question-image img:hover {
@@ -509,6 +809,36 @@ body::before {
     position: relative;
     flex: 1;
     max-width: 400px;
+}
+
+/* Desktop: Input y controles optimizados */
+@media (min-width: 1024px) {
+    .input-container {
+        max-width: 800px;
+        gap: var(--space-2xl);
+        margin-bottom: var(--space-2xl);
+    }
+    
+    .word-input-wrapper {
+        max-width: 500px;
+    }
+    
+    .word-input {
+        font-size: var(--text-3xl);
+        padding: var(--space-xl) var(--space-2xl);
+        min-height: 80px;
+    }
+    
+    .hint-text {
+        font-size: var(--text-3xl);
+    }
+    
+    .submit-btn {
+        padding: var(--space-xl) var(--space-2xl);
+        font-size: var(--text-xl);
+        min-width: 160px;
+        min-height: 80px;
+    }
 }
 
 .word-input {
@@ -652,6 +982,21 @@ body::before {
     min-width: 140px;
 }
 
+/* Desktop: Controles más grandes y espaciados */
+@media (min-width: 1024px) {
+    .game-controls {
+        gap: var(--space-2xl);
+        margin-top: var(--space-2xl);
+    }
+    
+    .next-btn, .listen-btn {
+        padding: var(--space-xl) var(--space-2xl);
+        font-size: var(--text-xl);
+        min-width: 180px;
+        min-height: 60px;
+    }
+}
+
 .next-btn {
     background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
     color: var(--color-text-on-primary);
@@ -697,6 +1042,34 @@ body::before {
     max-width: 600px;
     width: 100%;
     border: 1px solid rgba(147, 112, 219, 0.1);
+}
+
+/* Desktop: Modo libre más espacioso */
+@media (min-width: 1024px) {
+    .free-play-content {
+        max-width: 800px;
+        padding: var(--space-3xl) var(--space-3xl);
+    }
+    
+    .free-header h2 {
+        font-size: var(--text-4xl);
+        margin-bottom: var(--space-lg);
+    }
+    
+    .free-header p {
+        font-size: var(--text-xl);
+        margin-bottom: var(--space-3xl);
+    }
+    
+    .free-input-large {
+        font-size: var(--text-3xl);
+        padding: var(--space-2xl);
+    }
+    
+    .back-btn-large {
+        font-size: var(--text-xl);
+        padding: var(--space-xl) var(--space-3xl);
+    }
 }
 
 .free-header h2 {
@@ -768,6 +1141,218 @@ body::before {
     box-shadow: var(--shadow-md);
 }
 
+/* ===== ELEMENTOS ESPECÍFICOS DEL MODO LIBRE MEJORADO ===== */
+
+/* Sección de input y botón hablar */
+.free-input-section {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.free-input-wrapper {
+    flex: 1;
+    margin-bottom: 0; /* Override el margin-bottom anterior */
+}
+
+/* Botón Hablar específico para modo libre */
+.free-speak-btn {
+    background: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 60px; /* Alineado con el input */
+    white-space: nowrap;
+}
+
+.free-speak-btn:hover {
+    background: #7B68D4;
+    border-color: #7B68D4;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.free-speak-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+.speak-icon {
+    font-size: var(--text-xl);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.speak-text {
+    letter-spacing: 0.02em;
+}
+
+/* ===== TECLADO QWERTY DISCRETO PARA MODO LIBRE ===== */
+
+.free-keyboard-container {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-top: var(--space-xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(147, 112, 219, 0.15);
+    opacity: 0.9; /* Discreto como pedido */
+    transition: opacity var(--transition-normal);
+}
+
+.free-keyboard-container:hover {
+    opacity: 1;
+}
+
+.free-keyboard-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.free-keyboard-title {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+}
+
+.free-keyboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.free-keyboard-row {
+    display: flex;
+    gap: var(--space-xs);
+    justify-content: center;
+}
+
+/* Teclas del teclado QWERTY - más pequeñas y discretas que las del juego */
+.free-key {
+    background: var(--color-accent);
+    border: 1px solid rgba(147, 112, 219, 0.2);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-primary);
+    font-size: var(--text-base); /* Más pequeño que touch-letter */
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    min-width: 32px; /* Discreto: 32px vs 52px del juego principal */
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
+.free-key:hover {
+    background: var(--color-secondary);
+    border-color: rgba(147, 112, 219, 0.4);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.free-key:active {
+    transform: translateY(0) scale(0.95);
+    box-shadow: none;
+}
+
+/* Teclas especiales más anchas */
+.free-key.space-key {
+    min-width: 120px;
+    padding: var(--space-sm) var(--space-lg);
+}
+
+.free-key.backspace-key {
+    min-width: 50px;
+    background: #FFB6C1;
+    color: #8B4B8B;
+}
+
+.free-key.backspace-key:hover {
+    background: #FF9FB0;
+}
+
+/* Responsive para teclado libre */
+@media (max-width: 768px) {
+    .free-input-section {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: stretch;
+    }
+    
+    .free-speak-btn {
+        min-height: 50px;
+        font-size: var(--text-base);
+        padding: var(--space-md) var(--space-lg);
+        align-self: center;
+        width: fit-content;
+    }
+    
+    .free-keyboard-container {
+        padding: var(--space-md);
+    }
+    
+    .free-key {
+        min-width: 28px;
+        min-height: 28px;
+        font-size: var(--text-sm);
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    .free-key.space-key {
+        min-width: 100px;
+    }
+    
+    .free-key.backspace-key {
+        min-width: 42px;
+    }
+}
+
+@media (max-width: 480px) {
+    .free-key {
+        min-width: 24px;
+        min-height: 24px;
+        font-size: var(--text-xs);
+        padding: var(--space-xs);
+        gap: var(--space-xs);
+    }
+    
+    .free-keyboard-grid {
+        gap: 2px;
+    }
+    
+    .free-keyboard-row {
+        gap: 2px;
+    }
+    
+    .free-key.space-key {
+        min-width: 80px;
+    }
+    
+    .free-key.backspace-key {
+        min-width: 36px;
+    }
+}
+
 /* ===== PANTALLA DE RESULTADOS ===== */
 .results-screen {
     text-align: center;
@@ -779,6 +1364,39 @@ body::before {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     border: 1px solid rgba(147, 112, 219, 0.1);
+}
+
+/* Desktop: Pantalla de resultados más impactante */
+@media (min-width: 1024px) {
+    .results-content {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: var(--space-3xl) var(--space-3xl);
+    }
+    
+    .results-content h2 {
+        font-size: var(--text-5xl);
+        margin-bottom: var(--space-2xl);
+    }
+    
+    .score-number {
+        font-size: var(--text-5xl);
+    }
+    
+    .score-text, .score-total {
+        font-size: var(--text-2xl);
+    }
+    
+    .stars-earned {
+        font-size: var(--text-3xl);
+        margin-bottom: var(--space-3xl);
+    }
+    
+    .play-again-btn {
+        font-size: var(--text-2xl);
+        padding: var(--space-2xl) var(--space-3xl);
+        min-height: 80px;
+    }
 }
 
 .results-content h2 {
@@ -1430,6 +2048,32 @@ body::before {
     position: relative;
 }
 
+/* Desktop: Letras táctiles más grandes y mejor distribuidas */
+@media (min-width: 1024px) {
+    .touch-letters-container {
+        margin-top: var(--space-2xl);
+        padding: var(--space-2xl);
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .touch-letter {
+        min-width: 60px;
+        min-height: 60px;
+        font-size: var(--text-3xl);
+        padding: var(--space-lg);
+    }
+    
+    .touch-letters-grid {
+        gap: var(--space-md);
+    }
+    
+    .touch-letters-title {
+        font-size: var(--text-xl);
+    }
+}
+
 .touch-letters-header {
     display: flex;
     justify-content: space-between;
@@ -1749,6 +2393,37 @@ body::before {
     position: relative;
     transform: translateY(30px) scale(0.9);
     transition: all 0.3s ease-out;
+}
+
+/* Desktop: Modales más grandes y espaciosos */
+@media (min-width: 1024px) {
+    .modal-content {
+        max-width: 650px;
+        max-height: 80vh;
+    }
+    
+    .modal-header h2 {
+        font-size: var(--text-4xl);
+    }
+    
+    .modal-subtitle {
+        font-size: var(--text-xl);
+    }
+    
+    .settings-input, .settings-select {
+        font-size: var(--text-xl);
+        padding: var(--space-xl);
+    }
+    
+    .modal-btn {
+        font-size: var(--text-xl);
+        padding: var(--space-xl) var(--space-2xl);
+        min-height: 60px;
+    }
+    
+    .help-modal-content {
+        max-width: 750px;
+    }
 }
 
 .modal-overlay.show .modal-content {

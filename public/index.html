@@ -21,9 +21,6 @@
     <div class="container">
         <header class="header">
             <div class="header-left">
-                <button class="back-btn-header hidden" id="backBtnHeader" onclick="goBack()" title="Volver al menú">
-                    <span class="back-icon">←</span>
-                </button>
                 <h1 class="title" id="mainTitle">¡Aprende con Olivia! 🌟</h1>
             </div>
             <div class="header-center">
@@ -113,13 +110,27 @@
                     </div>
                     
                     <div class="free-main">
-                        <div class="free-input-wrapper">
-                            <input type="text" id="freeInput" class="free-input-large" placeholder="Escribe cualquier palabra..." autocomplete="off" spellcheck="false">
+                        <div class="free-input-section">
+                            <div class="free-input-wrapper">
+                                <input type="text" id="freeInput" class="free-input-large" placeholder="Escribe cualquier palabra..." autocomplete="off" spellcheck="false">
+                            </div>
+                            <button class="free-speak-btn" id="freeSpeakBtn" onclick="speakFreeInput()" title="Escuchar pronunciación">
+                                <span class="speak-icon">🎤</span>
+                                <span class="speak-text">Hablar</span>
+                            </button>
                         </div>
                         
                         <div class="free-instructions">
-                            <p>Presiona <strong>Enter</strong> para escuchar la pronunciación</p>
+                            <p>Escribe cualquier palabra y presiona <strong>Hablar</strong> para escuchar la pronunciación</p>
                         </div>
+                    </div>
+
+                    <!-- Teclado QWERTY táctil discreto para modo libre -->
+                    <div id="freeKeyboardContainer" class="free-keyboard-container">
+                        <div class="free-keyboard-header">
+                            <span class="free-keyboard-title">Teclado:</span>
+                        </div>
+                        <div id="freeKeyboard" class="free-keyboard-grid"></div>
                     </div>
                     
                     <div class="free-footer">
@@ -146,6 +157,12 @@
     </div>
 
     <div id="confetti-container" class="confetti-container"></div>
+
+    <!-- Botón flotante optimizado para niños -->
+    <button class="floating-back-btn hidden" id="floatingBackBtn" onclick="goBack()" title="Volver al menú principal" aria-label="Volver al menú principal">
+        <span class="floating-back-icon">↩️</span>
+        <span class="floating-back-text">Menú</span>
+    </button>
 
     <!-- Modal de Configuración Inicial -->
     <div id="settingsModal" class="modal-overlay">

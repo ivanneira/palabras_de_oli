@@ -348,6 +348,8 @@ class PalabrasGame {
                     e.preventDefault();
                     this.speakFreeInput();
                 }
+                // Nota: Las teclas normales (letras, espacio, backspace) ya son manejadas
+                // automáticamente por el input. Solo necesitamos manejar casos especiales.
             };
             
             freeInput.addEventListener('keydown', freeKeyHandler);
@@ -1329,8 +1331,14 @@ class PalabrasGame {
         try {
             if (difficulty === 'libre') {
                 this.showScreen('freePlayScreen');
+                
+                // Configurar el teclado QWERTY para modo libre
+                this.setupFreeKeyboard();
+                
                 const freeInput = document.getElementById('freeInput');
                 if (freeInput) {
+                    // Limpiar input al iniciar modo libre
+                    freeInput.value = '';
                     freeInput.focus();
                 }
                 return;
@@ -2322,6 +2330,16 @@ class PalabrasGame {
             }
         }
         
+        // Mostrar/ocultar teclado libre según la pantalla
+        const freeKeyboardContainer = document.getElementById('freeKeyboardContainer');
+        if (freeKeyboardContainer) {
+            if (screenId === 'freePlayScreen') {
+                freeKeyboardContainer.style.display = 'block';
+            } else {
+                freeKeyboardContainer.style.display = 'none';
+            }
+        }
+        
         // Mostrar/ocultar elementos del header según la pantalla
         this.updateHeaderVisibility(screenId);
         
@@ -2337,16 +2355,17 @@ class PalabrasGame {
     }
     
     updateHeaderVisibility(screenId) {
-        const backBtn = document.getElementById('backBtnHeader');
+        const floatingBackBtn = document.getElementById('floatingBackBtn');
         const progress = document.getElementById('progressHeader');
         
-        if (screenId === 'gameScreen') {
-            // Mostrar botón atrás y progreso en el juego
-            if (backBtn) backBtn.classList.remove('hidden');
-            if (progress) progress.classList.remove('hidden');
+        if (screenId === 'gameScreen' || screenId === 'freePlayScreen' || screenId === 'resultsScreen') {
+            // Mostrar botón flotante y progreso cuando no estamos en menú principal
+            if (floatingBackBtn) floatingBackBtn.classList.remove('hidden');
+            if (progress && screenId === 'gameScreen') progress.classList.remove('hidden');
+            else if (progress) progress.classList.add('hidden');
         } else {
-            // Ocultar en otras pantallas
-            if (backBtn) backBtn.classList.add('hidden');
+            // Ocultar en pantalla de inicio
+            if (floatingBackBtn) floatingBackBtn.classList.add('hidden');
             if (progress) progress.classList.add('hidden');
         }
     }
@@ -2617,6 +2636,121 @@ class PalabrasGame {
                 letterBtn.classList.add('used');
             }
         });
+    }
+
+    // ===== SISTEMA DE TECLADO QWERTY PARA MODO LIBRE =====
+
+    setupFreeKeyboard() {
+        const freeKeyboardContainer = document.getElementById('freeKeyboardContainer');
+        const freeKeyboard = document.getElementById('freeKeyboard');
+        
+        if (!freeKeyboardContainer || !freeKeyboard) return;
+
+        // Mostrar el contenedor del teclado
+        freeKeyboardContainer.style.display = 'block';
+        
+        // Limpiar teclado anterior
+        freeKeyboard.innerHTML = '';
+        
+        // Layout QWERTY completo con Ñ incluido
+        const qwertyRows = [
+            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+            ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'],
+            ['z', 'x', 'c', 'v', 'b', 'n', 'm', '⌫'], // ⌫ es backspace
+            ['ESPACIO'] // Barra espaciadora
+        ];
+        
+        // Crear las filas del teclado
+        qwertyRows.forEach((row, rowIndex) => {
+            const keyboardRow = document.createElement('div');
+            keyboardRow.className = 'free-keyboard-row';
+            
+            row.forEach(key => {
+                const keyBtn = this.createFreeKey(key);
+                keyboardRow.appendChild(keyBtn);
+            });
+            
+            freeKeyboard.appendChild(keyboardRow);
+        });
+    }
+
+    createFreeKey(key) {
+        const keyBtn = document.createElement('button');
+        keyBtn.className = 'free-key';
+        
+        // Configurar teclas especiales
+        if (key === 'ESPACIO') {
+            keyBtn.classList.add('space-key');
+            keyBtn.textContent = 'ESPACIO';
+            keyBtn.dataset.key = ' ';
+        } else if (key === '⌫') {
+            keyBtn.classList.add('backspace-key');
+            keyBtn.textContent = '⌫';
+            keyBtn.dataset.key = 'backspace';
+        } else {
+            keyBtn.textContent = key.toUpperCase();
+            keyBtn.dataset.key = key;
+        }
+        
+        // Agregar event listeners
+        keyBtn.addEventListener('click', (e) => this.onFreeKeyClick(e));
+        keyBtn.addEventListener('touchstart', (e) => this.onFreeKeyTouch(e), { passive: true });
+        
+        // Track listener para cleanup
+        this.eventListeners.push({
+            element: keyBtn,
+            event: 'click',
+            handler: (e) => this.onFreeKeyClick(e),
+            temp: true
+        });
+        
+        return keyBtn;
+    }
+
+    onFreeKeyClick(event) {
+        event.preventDefault();
+        const keyBtn = event.currentTarget;
+        const key = keyBtn.dataset.key;
+        
+        this.processFreeKeyInput(key);
+    }
+
+    onFreeKeyTouch(event) {
+        // Feedback visual inmediato para touch
+        const keyBtn = event.currentTarget;
+        keyBtn.style.transform = 'translateY(-1px) scale(0.95)';
+        
+        setTimeout(() => {
+            keyBtn.style.transform = '';
+        }, 150);
+    }
+
+    processFreeKeyInput(key) {
+        const freeInput = document.getElementById('freeInput');
+        if (!freeInput) return;
+        
+        if (key === 'backspace') {
+            // Borrar último carácter
+            const currentValue = freeInput.value;
+            freeInput.value = currentValue.slice(0, -1);
+        } else {
+            // Agregar carácter
+            freeInput.value += key;
+        }
+        
+        // Mantener el foco en el input y aplicar text-transform uppercase
+        freeInput.focus();
+        
+        // Simular evento de input para cualquier listener existente
+        const inputEvent = new Event('input', { bubbles: true });
+        freeInput.dispatchEvent(inputEvent);
+    }
+
+    hideFreeKeyboard() {
+        const freeKeyboardContainer = document.getElementById('freeKeyboardContainer');
+        if (freeKeyboardContainer) {
+            freeKeyboardContainer.style.display = 'none';
+        }
     }
 
 }
